@@ -1,0 +1,162 @@
+import type { LessonCard, ModuleSection } from './attacker-operations'
+
+export const PHISHING_TYPES_CONTENT: ModuleSection[] = [
+  {
+    id: 'targeted-attacks',
+    title: 'Targeted Email Attacks',
+    icon: 'Crosshair',
+    description: 'Not all phishing is sent to millions. Targeted attacks use personalized information to dramatically increase effectiveness.',
+    cards: [
+      {
+        id: 'spear-vs-mass',
+        type: 'comparison',
+        title: 'Mass Phishing vs. Spear Phishing',
+        summary: 'The same criminal objective — very different methods and success rates.',
+        detail: 'Mass phishing is a volume play — send a million emails, 0.1% click rate gives 1,000 victims. Spear phishing is precision targeting — send 5 emails with rich personalization, get 30%+ click rates. The rise of OSINT and AI has made spear phishing accessible to low-skill attackers.',
+        left: {
+          label: 'Mass Phishing',
+          items: [
+            'Generic "Dear Customer" greeting',
+            'Sent to millions of random recipients',
+            'Standard lures: bank alerts, prize wins',
+            '~3% average click rate',
+            'Low cost, low effort per email',
+            'Caught by most spam filters',
+          ],
+        },
+        right: {
+          label: 'Spear Phishing',
+          items: [
+            'Uses real name, job title, manager\'s name',
+            'Targeted at specific individual after research',
+            'References real projects, recent events',
+            'Up to 30% click rate',
+            'High research effort (or AI-automated)',
+            'Bypasses spam filters due to personalization',
+          ],
+        },
+      },
+      {
+        id: 'whaling',
+        type: 'reveal',
+        title: 'Whaling — Targeting "Big Fish"',
+        summary: 'Executive targeting with maximum reward. Click to see what makes whaling different.',
+        detail: 'Whaling targets senior executives — CEOs, CFOs, board members — because they have the authority to approve large financial transactions and access to the most sensitive systems. Whaling emails are meticulously researched and often impersonate legal authorities, regulatory bodies, or board members. The effort is justified because a single successful attack can yield millions.',
+        example: 'A CFO receives an email appearing to be from the board chair during an overseas trip: "I need you to authorize a $2M acquisition deposit before the markets close. Our lawyers have the account details. This is time-sensitive and confidential per the NDA."',
+      },
+      {
+        id: 'clone-phishing',
+        type: 'reveal',
+        title: 'Clone Phishing — The Evil Twin',
+        summary: 'The hardest phishing variant to detect because it starts with a real email. Click to learn how it works.',
+        detail: 'An attacker intercepts or finds a legitimate email previously sent, creates a near-identical copy with malicious links/attachments replacing the real ones, and resends it appearing to come from the original sender. Victims often remember the original legitimate email and assume this is a follow-up — making them far more likely to click.',
+        example: 'You received a legitimate DocuSign notification Monday. Tuesday you get an identical email "resending" the same document. The "resend" button links to a fake DocuSign credential page instead.',
+      },
+      {
+        id: 'bec',
+        type: 'warning',
+        title: 'Business Email Compromise — $2.9B in 2023',
+        summary: 'BEC is the costliest phishing variant because it uses no malware — bypassing all technical security controls.',
+        detail: 'BEC attacks impersonate executives or vendors to trick employees into transferring funds or sensitive data. The FBI calls it "the $26 billion scam." BEC involves no malicious links, no attachments, no malware — just an email that appears to come from someone with authority. Only process controls (calling back to verify) can stop it.',
+        items: [
+          '$2.9 billion in BEC losses in 2023 (FBI IC3)',
+          'No malware, links, or attachments — invisible to technical security tools',
+          'Targets finance teams, accounts payable, HR (W-2 data)',
+          'Common variants: CEO fraud, vendor impersonation, invoice fraud',
+          'Never wire funds based on email alone — always verify via phone',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'channel-attacks',
+    title: 'Multi-Channel Phishing',
+    icon: 'Smartphone',
+    description: 'Phishing has expanded beyond email to SMS, voice, QR codes, social media, and even video calls.',
+    cards: [
+      {
+        id: 'smishing',
+        type: 'reveal',
+        title: 'Smishing — SMS Phishing',
+        summary: '3× higher click rates than email. Click to learn why SMS is such an effective phishing channel.',
+        detail: 'Smishing exploits the higher inherent trust people have in SMS compared to email. Mobile devices also lack the corporate security tooling of managed laptops — no EDR, no URL filtering, no email gateway. Common lures: fake package delivery notifications, bank fraud alerts, toll unpaid notifications. Smishing click rates are 3× higher than email phishing.',
+        example: '"USPS: Your package #9400111899223282937655 could not be delivered. Please update your delivery preferences: [link]"',
+      },
+      {
+        id: 'vishing',
+        type: 'reveal',
+        title: 'Vishing — Voice Phishing',
+        summary: 'The human voice creates trust that text cannot replicate. AI now makes voice cloning a mass-market capability.',
+        detail: 'Vishing attackers call victims impersonating IT support, bank fraud departments, government agencies, or executives. The real-time nature of a phone call allows the attacker to overcome objections, escalate pressure, and adapt. Voice cloning AI (available for $0/month on free tools) can now create convincing impersonations from 3 seconds of audio sampled from YouTube or LinkedIn.',
+        example: 'A call from "your bank\'s fraud department": "We\'ve detected suspicious transactions on your account. To secure it immediately, please confirm your online banking credentials so we can freeze the transactions."',
+      },
+      {
+        id: 'quishing',
+        type: 'stat',
+        title: 'Quishing — QR Code Phishing',
+        summary: 'Email scanners cannot read QR codes. Attackers embed malicious URLs inside QR code images to bypass all email security tools.',
+        detail: 'In a single 2023 Microsoft-documented campaign, over 10,000 organizations were targeted with QR code phishing. The QR code contains the malicious URL — invisible to email security scanners that analyze text and URLs but not image content.',
+        items: [
+          '10,000+ organizations targeted in a single quishing campaign (2023)',
+          'Email scanners cannot decode QR code images',
+          'Victims scan on phones — which lack corporate security tools',
+          'Used to steal MFA codes, OAuth tokens, and credentials',
+          'Also placed in physical locations — parking meters, office signs, conference materials',
+        ],
+      },
+      {
+        id: 'oauth-phishing',
+        type: 'warning',
+        title: 'OAuth / Consent Phishing',
+        summary: 'This attack bypasses MFA entirely by stealing app permissions instead of passwords — and the access survives password resets.',
+        detail: 'The victim is tricked into authorizing a malicious OAuth application on their Microsoft 365 or Google account. The authorization flow is legitimate — the user really is on Microsoft\'s or Google\'s real website. But they\'re granting a malicious app permissions (read email, access files). This access: bypasses MFA, survives password changes, and requires admin-level revocation to remove.',
+        items: [
+          'No credentials are stolen — permissions are granted legitimately',
+          'Bypasses all forms of MFA',
+          'Access persists after password changes',
+          'Requires admin to revoke the app from Microsoft Entra / Google Admin',
+          'The 2017 Google Docs worm used this exact technique on 1M+ accounts',
+        ],
+      },
+      {
+        id: 'angler',
+        type: 'reveal',
+        title: 'Angler Phishing — Social Media Ambush',
+        summary: 'Attackers monitor public brand complaints on social media and immediately respond impersonating the brand\'s support team.',
+        detail: 'Angler phishing monitors keywords like "@YourBank I can\'t log in to my account" on Twitter/X, then responds immediately from a fake support account "@YourBank_Support" offering to help. They direct the victim to a fake support page or request account credentials for "verification." This works because the victim already contacted the brand and is expecting a response.',
+        example: 'You tweet: "@Barclays my card was declined three times today, what\'s going on?" Two minutes later: "@Barclays_Help: Hi! Sorry to hear that. Please DM us your card number and sort code so we can investigate."',
+      },
+    ],
+  },
+  {
+    id: 'advanced-credential',
+    title: 'Credential & Identity Attacks',
+    icon: 'KeyRound',
+    description: 'Modern attackers go beyond stealing passwords — they steal authenticated sessions and persistent access that survives credential resets.',
+    cards: [
+      {
+        id: 'mfa-fatigue',
+        type: 'warning',
+        title: 'MFA Fatigue Attack',
+        summary: 'Repeated push notifications until you approve one. This bypasses push-based MFA entirely.',
+        detail: 'If an attacker has your password, they can trigger an endless stream of MFA push notifications. By sending 50+ notifications at 2am, they bet that the exhausted victim approves one to make them stop. This is why "number matching" MFA (where you must type a code displayed on the screen) and FIDO2 keys are recommended over simple push approval.',
+        items: [
+          'Attacker needs your password first (often from phishing or breach)',
+          'Sends 50-100+ push notifications in rapid succession',
+          'Waits for victim to approve out of frustration or confusion',
+          'Defense: never approve MFA pushes you didn\'t initiate — report to IT',
+          'Systemic fix: use number-matching MFA or FIDO2 hardware keys',
+        ],
+      },
+    ],
+  },
+]
+
+export const PHISHING_TYPES_TAKEAWAYS = [
+  'Spear phishing is 10× more effective than mass phishing — personalization is the key differentiator.',
+  'BEC (Business Email Compromise) causes more financial loss than any other phishing type — $2.9B in 2023.',
+  'SMS phishing (smishing) has 3× higher click rates than email phishing — mobile devices are less protected.',
+  'QR codes hide malicious URLs from email scanners — always verify the destination before scanning.',
+  'OAuth phishing bypasses MFA and survives password changes — it steals app permissions, not credentials.',
+  'MFA fatigue attacks work against push-based MFA — only FIDO2 and passkeys provide full protection.',
+]
