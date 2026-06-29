@@ -340,7 +340,7 @@ export const ADVANCED_THREATS_CONTENT: ModuleSection[] = [
         detail:
           'OAuth phishing (also called "consent phishing" or "illicit consent grant") tricks users into authorizing a malicious third-party application on their Microsoft 365 or Google account. Unlike credential phishing, this access persists even after the victim changes their password — the malicious app retains its permission grant. Microsoft reported a 126% increase in OAuth phishing attacks in 2023.',
         example:
-          '"A shared document awaits you. Authorize PhishGuard Reader to access your Microsoft 365." — The "PhishGuard Reader" app is malicious. Clicking "Accept" grants it full read access to all emails, files, and contacts — permanently, until an admin revokes it.',
+          '"A shared document awaits you. Authorize DocSync Reader to access your Microsoft 365." — The "DocSync Reader" app is malicious. Clicking "Accept" grants it full read access to all emails, files, and contacts — permanently, until an admin revokes it.',
         source: 'Microsoft Threat Intelligence 2023',
       },
     ],

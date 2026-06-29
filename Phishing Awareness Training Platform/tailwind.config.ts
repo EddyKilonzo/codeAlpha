@@ -69,7 +69,8 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "Menlo", "Monaco", "Consolas", "monospace"],
       },
       keyframes: {
         "accordion-down": {
@@ -92,6 +93,10 @@ const config: Config = {
           from: { backgroundPosition: "-200px 0" },
           to: { backgroundPosition: "calc(200px + 100%) 0" },
         },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -99,6 +104,17 @@ const config: Config = {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-in": "slide-in 0.3s ease-out",
         shimmer: "shimmer 2s infinite linear",
+        float: "float 4s ease-in-out infinite",
+      },
+      boxShadow: {
+        "3xl": "0 35px 80px rgba(0,0,0,0.35)",
+        "brand-glow": "0 0 0 1px rgba(22,163,74,0.3), 0 8px 32px rgba(22,163,74,0.2)",
+        "brand-glow-lg": "0 0 0 1px rgba(22,163,74,0.4), 0 12px 48px rgba(22,163,74,0.35)",
+        "premium": "rgba(50,50,93,0.25) 0px 50px 100px -20px, rgba(0,0,0,0.3) 0px 30px 60px -30px, rgba(10,37,64,0.35) 0px -2px 6px 0px inset",
+        "premium-sm": "rgba(50,50,93,0.15) 0px 20px 50px -10px, rgba(0,0,0,0.2) 0px 12px 30px -15px, rgba(10,37,64,0.25) 0px -1px 4px 0px inset",
+      },
+      transitionDuration: {
+        "400": "400ms",
       },
     },
   },

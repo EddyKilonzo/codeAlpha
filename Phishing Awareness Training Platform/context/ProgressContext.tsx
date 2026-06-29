@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { UserProgress, QuizScore, Achievement, FlashcardProgress, GamificationNotification } from '@/types'
-import { STORAGE_KEY, TOTAL_MODULES } from '@/lib/constants'
+import { STORAGE_KEY, TOTAL_MODULES, PASSING_SCORE } from '@/lib/constants'
 import { getLevelFromXP, getLevelInfo } from '@/lib/levelUtils'
 import { calculateStreakDelta, migrateProgress } from '@/lib/progressUtils'
 import { MODULES } from '@/data/modules'
@@ -35,6 +35,8 @@ const DEFAULT_PROGRESS: UserProgress = {
   lessonViewedAt: {},
   voiceCompletedModules: [],
   totalXPEarned: 0,
+  lastActiveModule: null,
+  lastActiveTabByModule: {},
 }
 
 // ─── Action Types ─────────────────────────────────────────────────────────────
@@ -54,6 +56,7 @@ type ProgressAction =
   | { type: 'SET_FLASHCARD_REVIEW'; payload: { moduleId: string; cardId: string } }
   | { type: 'COMPLETE_FLASHCARDS'; payload: { moduleId: string } }
   | { type: 'SET_CERTIFICATE_ID'; payload: { id: string } }
+  | { type: 'SET_LAST_ACTIVE'; payload: { moduleId: string; tab: string } }
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
 
@@ -94,7 +97,12 @@ function progressReducer(state: UserProgress, action: ProgressAction): UserProgr
         updatedUnlocked = [...updatedUnlocked, nextModule.id]
       }
 
-      const certificateEligible = updatedCompleted.length >= TOTAL_MODULES
+      // All modules completed AND every quiz passed at ≥ PASSING_SCORE
+      const newQuizScores = { ...state.quizScores }
+      const allQuizzesPassed = updatedCompleted.every(
+        (id) => (newQuizScores[id]?.score ?? 0) >= PASSING_SCORE
+      )
+      const certificateEligible = updatedCompleted.length >= TOTAL_MODULES && allQuizzesPassed
 
       return {
         ...state,
@@ -237,6 +245,16 @@ function progressReducer(state: UserProgress, action: ProgressAction): UserProgr
         },
       }
     }
+
+    case 'SET_LAST_ACTIVE':
+      return {
+        ...state,
+        lastActiveModule: action.payload.moduleId,
+        lastActiveTabByModule: {
+          ...state.lastActiveTabByModule,
+          [action.payload.moduleId]: action.payload.tab,
+        },
+      }
 
     default:
       return state

@@ -136,6 +136,9 @@ export interface UserProgress {
   lessonViewedAt: Record<string, string>
   voiceCompletedModules: string[]
   totalXPEarned: number
+  // Session resumption — restored on next visit
+  lastActiveModule: string | null
+  lastActiveTabByModule: Record<string, string>
 }
 
 // ─── Voice Summary ────────────────────────────────────────────────────────────

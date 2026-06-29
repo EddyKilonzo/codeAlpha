@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookOpen, CreditCard, Swords, GraduationCap, Lock, CheckCircle2, Clock, Zap } from 'lucide-react'
+import Link from 'next/link'
+import { BookOpen, CreditCard, Swords, GraduationCap, Lock, CheckCircle2, Clock, Star, ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useProgress } from '@/hooks/useProgress'
+import { MODULES } from '@/data/modules'
 import { FLASHCARD_DECKS } from '@/data/flashcards'
 import { QUIZZES } from '@/data/quizzes'
 import { SIMULATIONS } from '@/data/simulations'
@@ -26,7 +28,9 @@ import { ADVANCED_THREATS_CONTENT, ADVANCED_THREATS_TAKEAWAYS } from '@/data/con
 import { CASE_STUDIES } from '@/data/content/case-studies'
 import { DEFENSE_CONTENT, DEFENSE_TAKEAWAYS } from '@/data/content/defense-best-practices'
 import { LessonSection } from '@/components/lessons/LessonSection'
+import { LessonReadingProgress } from '@/components/lessons/LessonReadingProgress'
 import { CaseStudyCard } from '@/components/case-studies/CaseStudyCard'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 import type { Module, Simulation } from '@/types'
 
@@ -56,11 +60,17 @@ interface Props {
 }
 
 export function ModulePageClient({ module }: Props) {
-  const { isHydrated, isModuleUnlocked, isModuleCompleted, getQuizScore, markLessonViewed, progress, checkModuleAchievements } = useProgress()
-  const [activeTab, setActiveTab] = useState<Tab>('lesson')
+  const { isHydrated, isModuleUnlocked, isModuleCompleted, getQuizScore, markLessonViewed, progress, checkModuleAchievements, setLastActive } = useProgress()
+  const savedTab = (progress.lastActiveTabByModule[module.id] ?? 'lesson') as Tab
+  const [activeTab, setActiveTab] = useState<Tab>(savedTab)
   const [quizDone, setQuizDone] = useState(false)
   const [preVoiceDone, setPreVoiceDone] = useState(false)
   const [showPostVoice, setShowPostVoice] = useState(false)
+
+  const switchTab = (tab: Tab) => {
+    setActiveTab(tab)
+    setLastActive(module.id, tab)
+  }
 
   const isUnlocked = isModuleUnlocked(module.id)
   const isCompleted = isModuleCompleted(module.id)
@@ -75,8 +85,10 @@ export function ModulePageClient({ module }: Props) {
   useEffect(() => {
     if (isHydrated && isUnlocked) {
       markLessonViewed(module.id)
+      setLastActive(module.id, activeTab)
     }
-  }, [isHydrated, isUnlocked, module.id, markLessonViewed])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHydrated, isUnlocked, module.id])
 
   useEffect(() => {
     if (quizScore?.passed) setQuizDone(true)
@@ -87,18 +99,102 @@ export function ModulePageClient({ module }: Props) {
     if (isCompleted) setPreVoiceDone(true)
   }, [isCompleted])
 
-  if (!isHydrated) return null
+  if (!isHydrated) return (
+    <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-5">
+      {/* Back link */}
+      <div className="h-4 w-28 rounded bg-muted skeleton" />
+      {/* Module header */}
+      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-premium-sm space-y-3">
+        <div className="flex items-start gap-4">
+          <div className="h-14 w-14 rounded-xl bg-muted skeleton shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-6 w-56 rounded-lg bg-muted skeleton" />
+            <div className="h-4 w-80 rounded bg-muted skeleton" />
+            <div className="flex gap-3 pt-1">
+              <div className="h-3.5 w-16 rounded bg-muted skeleton" />
+              <div className="h-3.5 w-16 rounded bg-muted skeleton" />
+            </div>
+          </div>
+        </div>
+        {/* Tab bar skeleton */}
+        <div className="flex gap-1 mt-2 border-t border-border pt-3">
+          {[80, 72, 96, 56].map((w, i) => (
+            <div key={i} className={`h-8 rounded-lg bg-muted skeleton`} style={{ width: w }} />
+          ))}
+        </div>
+      </div>
+      {/* Content skeletons */}
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="rounded-2xl border border-border bg-card p-5 space-y-3">
+          <div className="h-5 w-44 rounded-lg bg-muted skeleton" />
+          <div className="space-y-2">
+            <div className="h-3.5 w-full rounded bg-muted skeleton" />
+            <div className="h-3.5 w-[92%] rounded bg-muted skeleton" />
+            <div className="h-3.5 w-4/5 rounded bg-muted skeleton" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 
   if (!isUnlocked) {
+    const prevModule = MODULES.find((m) => m.order === module.order - 1)
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
-          <Lock className="h-8 w-8 text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6 py-12">
+        {/* Decorative grid behind icon */}
+        <div className="relative mb-8">
+          {/* Subtle radial glow */}
+          <div className="absolute inset-0 -m-8 rounded-full bg-gradient-radial from-muted/60 to-transparent opacity-60 blur-2xl" />
+
+          <motion.div
+            initial={{ scale: 0, rotate: -12, opacity: 0 }}
+            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 22, delay: 0.05 }}
+            className="relative flex h-24 w-24 items-center justify-center rounded-3xl border border-border bg-card shadow-lg"
+          >
+            {/* Grid pattern inside icon box */}
+            <svg className="absolute inset-0 w-full h-full rounded-3xl opacity-20" xmlns="http://www.w3.org/2000/svg">
+              <pattern id="lock-grid" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
+                <path d="M 12 0 L 0 0 L 0 12" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-foreground" />
+              </pattern>
+              <rect width="100%" height="100%" fill="url(#lock-grid)" />
+            </svg>
+            <Lock className="h-10 w-10 text-muted-foreground/70" />
+          </motion.div>
         </div>
-        <h2 className="text-xl font-bold text-foreground">Module Locked</h2>
-        <p className="mt-2 text-sm text-muted-foreground max-w-xs">
-          Complete the previous module to unlock {module.title}.
-        </p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18, duration: 0.35 }}
+          className="space-y-3 max-w-sm"
+        >
+          <h2 className="text-xl font-extrabold tracking-tight text-foreground">Module Locked</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Finish{' '}
+            <span className="font-semibold text-foreground">
+              {prevModule ? prevModule.title : 'the previous module'}
+            </span>{' '}
+            to unlock <span className="font-semibold text-foreground">{module.title}</span>.
+          </p>
+
+          {prevModule && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.28 }}
+              className="pt-2"
+            >
+              <Link
+                href={`/modules/${prevModule.id}`}
+                className="inline-flex items-center gap-2 rounded-xl bg-brand/8 border border-brand/20 px-5 py-2.5 text-[13px] font-semibold text-brand hover:bg-brand/12 transition-colors"
+              >
+                Continue with {prevModule.title}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </motion.div>
+          )}
+        </motion.div>
       </div>
     )
   }
@@ -111,48 +207,55 @@ export function ModulePageClient({ module }: Props) {
   ]
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
+    <div className="max-w-3xl mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-6">
       {/* Module header */}
       <div className="space-y-3">
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-bold text-foreground">{module.title}</h1>
+          <h1 className="text-xl font-extrabold text-foreground tracking-tight">{module.title}</h1>
           {isCompleted && (
-            <Badge className="bg-brand/10 text-brand border-brand/30 gap-1">
-              <CheckCircle2 className="h-3 w-3" /> Completed
+            <Badge className="bg-brand/10 text-brand border-brand/20 gap-1 text-[10px] font-bold">
+              <CheckCircle2 className="h-2.5 w-2.5" /> Completed
             </Badge>
           )}
         </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">{module.description}</p>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> ~{module.estimatedMinutes} min</span>
-          <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-brand" /> +{module.xpReward} XP on completion</span>
+        <p className="text-[13px] text-muted-foreground leading-relaxed max-w-2xl">{module.description}</p>
+        <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> ~{module.estimatedMinutes} min</span>
+          <span className="flex items-center gap-1.5 text-brand font-semibold"><Star className="h-3 w-3" /> +{module.xpReward} XP</span>
           {quizScore && (
-            <span className="flex items-center gap-1 text-brand font-medium">
-              <GraduationCap className="h-3 w-3" /> Quiz: {quizScore.score}%
+            <span className="flex items-center gap-1.5 text-brand font-bold">
+              <GraduationCap className="h-3 w-3" /> {quizScore.score}% quiz score
             </span>
           )}
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-0 border-b border-border overflow-x-auto -mx-0">
+      {/* Tab bar — sticky below header, with reading progress bar */}
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 overflow-hidden">
+        {activeTab === 'lesson' && <LessonReadingProgress />}
+        <div
+          className="flex gap-0 border-b border-border/50 overflow-x-auto px-4 sm:px-6"
+          style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(16px)' }}
+        >
         {tabs.map((tab) => {
           const Icon = tab.icon
+          const isActive = activeTab === tab.id
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => switchTab(tab.id)}
               className={cn(
-                'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap -mb-px',
-                activeTab === tab.id
-                  ? 'border-brand text-brand'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                'relative flex items-center gap-2 px-4 py-3 text-[13px] font-medium transition-colors whitespace-nowrap',
+                isActive ? 'text-brand' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <Icon className="h-4 w-4" />
               {tab.label}
               {tab.count && (
-                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                <span className={cn(
+                  'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                  isActive ? 'bg-brand/10 text-brand' : 'bg-muted text-muted-foreground'
+                )}>
                   {tab.count}
                 </span>
               )}
@@ -161,9 +264,18 @@ export function ModulePageClient({ module }: Props) {
                   {tab.badge}
                 </span>
               )}
+              {/* Animated underline */}
+              {isActive && (
+                <motion.div
+                  layoutId="tab-underline"
+                  className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full bg-brand"
+                  transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+                />
+              )}
             </button>
           )
         })}
+        </div>
       </div>
 
       {/* Tab content */}
@@ -193,7 +305,7 @@ export function ModulePageClient({ module }: Props) {
                     <LessonSection key={(section as { id: string }).id} section={section} index={i} />
                   ))}
                   {content?.takeaways && content.takeaways.length > 0 && (
-                    <div className="rounded-xl border border-brand/20 bg-brand/5 p-5 space-y-3">
+                    <div className="rounded-xl border border-brand/20 bg-brand/5 p-5 space-y-3 shadow-premium">
                       <h3 className="text-sm font-bold text-brand uppercase tracking-wider">Key Takeaways</h3>
                       <ul className="space-y-2">
                         {content.takeaways.map((t, i) => (
@@ -210,8 +322,8 @@ export function ModulePageClient({ module }: Props) {
 
               <div className="pt-2">
                 <button
-                  onClick={() => setActiveTab('flashcards')}
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand/10 border border-brand/30 px-4 py-2.5 text-sm font-medium text-brand hover:bg-brand/20 transition-colors"
+                  onClick={() => switchTab('flashcards')}
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand/8 border border-brand/20 px-5 py-2.5 text-[13px] font-semibold text-brand hover:bg-brand/15 hover:border-brand/30 transition-all duration-150"
                 >
                   <CreditCard className="h-4 w-4" />
                   Review Flashcards →
@@ -228,8 +340,8 @@ export function ModulePageClient({ module }: Props) {
                   <FlashcardDeck cards={flashcards} moduleId={module.id} />
                   <div className="pt-2">
                     <button
-                      onClick={() => setActiveTab(simulations.length > 0 ? 'simulations' : 'quiz')}
-                      className="inline-flex items-center gap-2 rounded-lg bg-brand/10 border border-brand/30 px-4 py-2.5 text-sm font-medium text-brand hover:bg-brand/20 transition-colors"
+                      onClick={() => switchTab(simulations.length > 0 ? 'simulations' : 'quiz')}
+                      className="inline-flex items-center gap-2 rounded-xl bg-brand/8 border border-brand/20 px-5 py-2.5 text-[13px] font-semibold text-brand hover:bg-brand/15 hover:border-brand/30 transition-all duration-150"
                     >
                       {simulations.length > 0 ? (
                         <><Swords className="h-4 w-4" /> Try Simulations →</>
@@ -255,8 +367,8 @@ export function ModulePageClient({ module }: Props) {
                   ))}
                   <div className="pt-2">
                     <button
-                      onClick={() => setActiveTab('quiz')}
-                      className="inline-flex items-center gap-2 rounded-lg bg-brand/10 border border-brand/30 px-4 py-2.5 text-sm font-medium text-brand hover:bg-brand/20 transition-colors"
+                      onClick={() => switchTab('quiz')}
+                      className="inline-flex items-center gap-2 rounded-xl bg-brand/8 border border-brand/20 px-5 py-2.5 text-[13px] font-semibold text-brand hover:bg-brand/15 hover:border-brand/30 transition-all duration-150"
                     >
                       <GraduationCap className="h-4 w-4" /> Take the Quiz →
                     </button>
@@ -291,14 +403,16 @@ export function ModulePageClient({ module }: Props) {
               {/* Quiz engine (shown after pre-voice or on retake) */}
               {(preVoiceDone || quizDone) && (
                 quiz ? (
-                  <QuizEngine
-                    quiz={quiz}
-                    onComplete={() => {
-                      setQuizDone(true)
-                      setShowPostVoice(true)
-                      checkModuleAchievements(progress.completedModules.length)
-                    }}
-                  />
+                  <ErrorBoundary>
+                    <QuizEngine
+                      quiz={quiz}
+                      onComplete={() => {
+                        setQuizDone(true)
+                        setShowPostVoice(true)
+                        checkModuleAchievements(progress.completedModules.length)
+                      }}
+                    />
+                  </ErrorBoundary>
                 ) : (
                   <p className="text-sm text-muted-foreground">Quiz coming soon for this module.</p>
                 )

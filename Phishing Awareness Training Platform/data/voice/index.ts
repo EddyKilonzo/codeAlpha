@@ -124,7 +124,7 @@ But the human layer matters just as much. URL inspection habits — hovering to 
 Finally, reporting suspicious emails is not optional — it is a responsibility. Your report gives the security team intelligence to protect colleagues who haven't seen the message yet.
 
 The quiz tests your ability to apply these practices to realistic scenarios. Think systematically — layer by layer — not just about one control at a time.`,
-    postQuiz: `Congratulations on completing the final module of the PhishGuard course.
+    postQuiz: `Congratulations on completing the final module of the PhishShield course.
 
 Your defence is now layered: you understand the attacker's mindset, the full range of attack vectors, the sophisticated technical methods they use, the real-world consequences of successful attacks, and the controls that prevent them.
 

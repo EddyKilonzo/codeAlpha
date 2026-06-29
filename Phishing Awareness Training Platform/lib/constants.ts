@@ -1,6 +1,6 @@
 export const STORAGE_KEY = 'phishing_training_progress' as const
 
-export const PASSING_SCORE = 80
+export const PASSING_SCORE = 75
 
 export const TOTAL_MODULES = 6
 

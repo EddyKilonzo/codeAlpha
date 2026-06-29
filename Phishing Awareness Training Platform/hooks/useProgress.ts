@@ -44,6 +44,9 @@ export function useProgress() {
   const setCertificateId = (id: string) =>
     dispatch({ type: 'SET_CERTIFICATE_ID', payload: { id } })
 
+  const setLastActive = (moduleId: string, tab: string) =>
+    dispatch({ type: 'SET_LAST_ACTIVE', payload: { moduleId, tab } })
+
   const markLessonViewed = (moduleId: string) => {
     const alreadyViewed = !!state.lessonViewedAt[moduleId]
     dispatch({ type: 'MARK_LESSON_VIEWED', payload: { moduleId } })
@@ -123,6 +126,7 @@ export function useProgress() {
     updateStreak,
     setUserName,
     setCertificateId,
+    setLastActive,
     markLessonViewed,
     markVoiceComplete,
     setFlashcardKnown,

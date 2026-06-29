@@ -26,18 +26,23 @@ function MultipleChoice({
 }) {
   return (
     <div className="space-y-2.5">
-      {question.options?.map((opt) => {
+      {question.options?.map((opt, i) => {
         const isSelected = selected === opt
         const isCorrect = opt === question.answer
         const showState = submitted
 
         return (
-          <button
+          <motion.button
             key={opt}
             onClick={() => !submitted && onSelect(opt)}
             disabled={submitted}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.04, duration: 0.2 }}
+            whileHover={!submitted ? { scale: 1.005, transition: { duration: 0.12 } } : {}}
+            whileTap={!submitted ? { scale: 0.98, transition: { duration: 0.08 } } : {}}
             className={cn(
-              'w-full flex items-center gap-3 rounded-xl border p-4 text-left text-sm transition-all',
+              'w-full flex items-center gap-3 rounded-xl border p-4 text-left text-sm transition-colors',
               !showState && !isSelected && 'border-border bg-card hover:bg-accent/40 hover:border-brand/40',
               !showState && isSelected && 'border-brand/50 bg-brand/10',
               showState && isCorrect && 'border-brand bg-brand/10',
@@ -45,16 +50,20 @@ function MultipleChoice({
               showState && !isSelected && !isCorrect && 'border-border/50 bg-card opacity-60',
             )}
           >
-            <span className={cn(
-              'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
-              !showState && isSelected ? 'border-brand bg-brand text-white' : 'border-muted-foreground/40',
-              showState && isCorrect ? 'border-brand bg-brand text-white' : '',
-              showState && isSelected && !isCorrect ? 'border-red-500 bg-red-500 text-white' : '',
-            )}>
+            <motion.span
+              className={cn(
+                'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
+                !showState && isSelected ? 'border-brand bg-brand text-white' : 'border-muted-foreground/40',
+                showState && isCorrect ? 'border-brand bg-brand text-white' : '',
+                showState && isSelected && !isCorrect ? 'border-red-500 bg-red-500 text-white' : '',
+              )}
+              animate={showState && isCorrect ? { scale: [1, 1.25, 1] } : {}}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
               {showState && isCorrect && <Check className="h-3 w-3" />}
               {showState && isSelected && !isCorrect && <X className="h-3 w-3" />}
               {!showState && isSelected && <Circle className="h-2 w-2 fill-current" />}
-            </span>
+            </motion.span>
             <span className={cn(
               'font-medium',
               showState && isCorrect ? 'text-brand' : '',
@@ -62,7 +71,7 @@ function MultipleChoice({
             )}>
               {opt}
             </span>
-          </button>
+          </motion.button>
         )
       })}
     </div>
@@ -88,12 +97,14 @@ function TrueFalse({
         const showState = submitted
 
         return (
-          <button
+          <motion.button
             key={opt}
             onClick={() => !submitted && onSelect(opt)}
             disabled={submitted}
+            whileHover={!submitted ? { scale: 1.02, transition: { duration: 0.15 } } : {}}
+            whileTap={!submitted ? { scale: 0.97, transition: { duration: 0.08 } } : {}}
             className={cn(
-              'flex-1 rounded-2xl border-2 p-6 text-center font-bold text-lg transition-all',
+              'flex-1 rounded-2xl border-2 p-6 text-center font-bold text-lg transition-colors',
               !showState && !isSelected && 'border-border bg-card hover:border-brand/40',
               !showState && isSelected && 'border-brand bg-brand/10 text-brand',
               showState && isCorrect && 'border-brand bg-brand/10 text-brand',
@@ -101,13 +112,17 @@ function TrueFalse({
               showState && !isSelected && !isCorrect && 'border-border/40 opacity-50',
             )}
           >
-            <div className="mb-2 flex justify-center">
+            <motion.div
+              className="mb-2 flex justify-center"
+              animate={showState && isCorrect ? { scale: [1, 1.2, 1], rotate: [0, -5, 5, 0] } : {}}
+              transition={{ duration: 0.4, delay: 0.05 }}
+            >
               {opt === 'True'
                 ? <CheckCircle2 className="h-8 w-8" />
                 : <XCircle className="h-8 w-8" />}
-            </div>
+            </motion.div>
             {opt}
-          </button>
+          </motion.button>
         )
       })}
     </div>
@@ -130,36 +145,45 @@ function MultipleSelect({
   return (
     <div className="space-y-2.5">
       <p className="text-xs text-muted-foreground mb-4">Select all that apply</p>
-      {question.options?.map((opt) => {
+      {question.options?.map((opt, i) => {
         const isSelected = selected.includes(opt)
         const isCorrect = correctAnswers.includes(opt)
         const showState = submitted
 
         return (
-          <button
+          <motion.button
             key={opt}
             onClick={() => !submitted && onToggle(opt)}
             disabled={submitted}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.04, duration: 0.2 }}
+            whileHover={!submitted ? { scale: 1.005, transition: { duration: 0.12 } } : {}}
+            whileTap={!submitted ? { scale: 0.98, transition: { duration: 0.08 } } : {}}
             className={cn(
-              'w-full flex items-center gap-3 rounded-xl border p-4 text-left text-sm transition-all',
+              'w-full flex items-center gap-3 rounded-xl border p-4 text-left text-sm transition-colors',
               !showState && !isSelected && 'border-border bg-card hover:bg-accent/40',
               !showState && isSelected && 'border-brand/50 bg-brand/10',
               showState && isCorrect && 'border-brand bg-brand/10',
               showState && isSelected && !isCorrect && 'border-red-400 bg-red-50 dark:bg-red-950/20',
             )}
           >
-            <span className={cn(
-              'flex h-5 w-5 shrink-0 items-center justify-center rounded border',
-              showState && isCorrect ? 'bg-brand border-brand text-white' : isSelected ? 'bg-brand border-brand text-white' : 'border-muted-foreground/40',
-            )}>
+            <motion.span
+              className={cn(
+                'flex h-5 w-5 shrink-0 items-center justify-center rounded border',
+                showState && isCorrect ? 'bg-brand border-brand text-white' : isSelected ? 'bg-brand border-brand text-white' : 'border-muted-foreground/40',
+              )}
+              animate={showState && isCorrect ? { scale: [1, 1.3, 1] } : {}}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
               {(isSelected || (showState && isCorrect)) && <Check className="h-3 w-3" />}
-            </span>
+            </motion.span>
             <span className={cn(
               showState && isCorrect ? 'text-brand font-medium' : 'text-foreground'
             )}>
               {opt}
             </span>
-          </button>
+          </motion.button>
         )
       })}
     </div>
@@ -566,7 +590,7 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
   const progress = ((state.currentIndex) / quiz.questions.length) * 100
 
   return (
-    <div className="space-y-6">
+    <div className="rounded-2xl border border-border/40 bg-card/80 backdrop-blur-sm shadow-sm p-5 sm:p-6 space-y-6">
       {/* Progress */}
       <div className="space-y-2">
         <div className="flex justify-between text-xs text-muted-foreground">
@@ -596,8 +620,15 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
             <h3 className="text-base font-semibold text-foreground leading-snug">{question.prompt}</h3>
           </div>
 
-          {/* Question type renderer */}
-          <div>
+          {/* Question type renderer — shakes on wrong answer */}
+          <motion.div
+            animate={
+              state.phase === 'feedback' && !state.feedbackCorrect
+                ? { x: [-10, 10, -7, 7, -4, 4, 0] }
+                : { x: 0 }
+            }
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
+          >
             {(question.type === 'multiple-choice' || question.type === 'hotspot') && (
               <MultipleChoice
                 question={question}
@@ -668,16 +699,16 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
                 submitted={state.phase === 'feedback'}
               />
             )}
-          </div>
+          </motion.div>
 
           {/* Feedback */}
           <AnimatePresence>
             {state.phase === 'feedback' && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
+                initial={{ opacity: 0, height: 0, scale: 0.97 }}
+                animate={{ opacity: 1, height: 'auto', scale: 1 }}
                 exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 className="overflow-hidden"
               >
                 <div className={cn(
@@ -687,11 +718,17 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
                     : 'border-red-200 dark:border-red-800/50 bg-red-50/60 dark:bg-red-950/20'
                 )}>
                   <div className="flex items-center gap-2">
-                    {state.feedbackCorrect ? (
-                      <CheckCircle2 className="h-5 w-5 text-brand" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    )}
+                    <motion.div
+                      initial={{ scale: 0, rotate: -20 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.05 }}
+                    >
+                      {state.feedbackCorrect ? (
+                        <CheckCircle2 className="h-5 w-5 text-brand" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-red-500" />
+                      )}
+                    </motion.div>
                     <span className={cn(
                       'text-sm font-bold',
                       state.feedbackCorrect ? 'text-brand' : 'text-red-600 dark:text-red-400'
@@ -706,33 +743,58 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
           </AnimatePresence>
 
           {/* Hints + submit row */}
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <HintSystem
               hints={question.hints}
               onUseHint={handleHint}
               disabled={state.phase === 'feedback'}
             />
 
-            {state.phase === 'question' ? (
-              <Button
-                onClick={handleSubmit}
-                disabled={!hasAnswer()}
-                className="bg-brand hover:bg-brand/90 text-white gap-2"
-              >
-                Submit Answer
-              </Button>
-            ) : (
-              <Button
-                onClick={handleNext}
-                className="bg-brand hover:bg-brand/90 text-white gap-2"
-              >
-                {isLast ? 'See Results' : 'Next Question'}
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            )}
+            <AnimatePresence mode="wait">
+              {state.phase === 'question' ? (
+                <motion.div
+                  key="submit"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="w-full sm:w-auto"
+                  whileHover={hasAnswer() ? { scale: 1.02 } : {}}
+                  whileTap={hasAnswer() ? { scale: 0.97 } : {}}
+                >
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!hasAnswer()}
+                    className="w-full"
+                  >
+                    Submit Answer
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="next"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="w-full sm:w-auto"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  <Button
+                    onClick={handleNext}
+                    className="w-full gap-2"
+                  >
+                    {isLast ? 'See Results' : 'Next Question'}
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </motion.div>
       </AnimatePresence>
     </div>
   )
 }
+

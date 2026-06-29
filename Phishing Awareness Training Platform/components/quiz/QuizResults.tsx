@@ -6,6 +6,7 @@ import { Trophy, XCircle, RotateCcw, ChevronRight, Star, Check, X } from 'lucide
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PASSING_SCORE } from '@/lib/constants'
+import { useCountUp } from '@/hooks/useCountUp'
 import type { Question } from '@/types'
 
 interface ResultItem {
@@ -30,6 +31,10 @@ export function QuizResults({ results, totalXP, moduleId, onRetry, onContinue }:
   const score = Math.round((correct / total) * 100)
   const passed = score >= PASSING_SCORE
 
+  // Animated count-ups — start at 0 and count to final values
+  const animatedScore = useCountUp(score, 900)
+  const animatedXP = useCountUp(totalXP, 1100)
+
   useEffect(() => {
     if (passed) {
       import('canvas-confetti').then(({ default: confetti }) => {
@@ -44,7 +49,7 @@ export function QuizResults({ results, totalXP, moduleId, onRetry, onContinue }:
       <motion.div
         initial={{ opacity: 0, scale: 0.92 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, ease: 'backOut' }}
+        transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
           'relative overflow-hidden rounded-2xl border p-8 text-center',
           passed
@@ -57,19 +62,39 @@ export function QuizResults({ results, totalXP, moduleId, onRetry, onContinue }:
             <motion.div
               initial={{ rotate: -20, scale: 0 }}
               animate={{ rotate: 0, scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring', stiffness: 260, damping: 20 }}
-              className="flex h-20 w-20 items-center justify-center rounded-full bg-brand/10"
+              transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 22 }}
+              className="relative flex h-20 w-20 items-center justify-center rounded-full bg-brand/10"
             >
-              <Trophy className="h-10 w-10 text-brand" />
+              {/* Glow ring on pass */}
+              <motion.div
+                className="absolute inset-0 rounded-full bg-brand/20"
+                animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                style={{ filter: 'blur(10px)' }}
+              />
+              <Trophy className="relative h-10 w-10 text-brand" />
             </motion.div>
           ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/30">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.1, type: 'spring', stiffness: 300, damping: 22 }}
+              className="flex h-20 w-20 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/30"
+            >
               <XCircle className="h-10 w-10 text-red-500" />
-            </div>
+            </motion.div>
           )}
 
           <div>
-            <h2 className="text-4xl font-black text-foreground">{score}%</h2>
+            {/* Animated score percentage */}
+            <motion.h2
+              className="text-4xl font-black text-foreground tabular-nums"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              {animatedScore}%
+            </motion.h2>
             <p className={cn('text-lg font-semibold mt-1', passed ? 'text-brand' : 'text-red-500')}>
               {passed ? 'Quiz Passed!' : 'Not Passed Yet'}
             </p>
@@ -78,11 +103,18 @@ export function QuizResults({ results, totalXP, moduleId, onRetry, onContinue }:
             </p>
           </div>
 
-          {/* XP earned */}
-          <div className="flex items-center gap-2 rounded-full bg-background/80 border border-border px-5 py-2">
-            <Star className="h-4 w-4 text-amber-500" />
-            <span className="text-sm font-bold text-foreground">+{totalXP} XP earned</span>
-          </div>
+          {/* Animated XP earned */}
+          {totalXP > 0 && (
+            <motion.div
+              className="flex items-center gap-2 rounded-full bg-background/80 border border-brand/25 px-5 py-2"
+              initial={{ opacity: 0, scale: 0.88 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.35, type: 'spring', stiffness: 300, damping: 22 }}
+            >
+              <Star className="h-4 w-4 text-brand" />
+              <span className="text-sm font-bold text-brand font-mono">+{animatedXP} XP earned</span>
+            </motion.div>
+          )}
         </div>
       </motion.div>
 
@@ -113,7 +145,7 @@ export function QuizResults({ results, totalXP, moduleId, onRetry, onContinue }:
                 <p className="text-xs font-medium text-foreground leading-snug">{result.question.prompt}</p>
               </div>
               {result.hintsUsed > 0 && (
-                <span className="shrink-0 text-[10px] text-amber-600 dark:text-amber-400">
+                <span className="shrink-0 text-[10px] text-muted-foreground">
                   −{result.xpDeducted} XP (hints)
                 </span>
               )}
@@ -143,7 +175,7 @@ export function QuizResults({ results, totalXP, moduleId, onRetry, onContinue }:
           Retry Quiz
         </Button>
         {passed && (
-          <Button onClick={onContinue} className="flex-1 gap-2 bg-brand hover:bg-brand/90 text-white">
+          <Button onClick={onContinue} className="flex-1 gap-2">
             Continue
             <ChevronRight className="h-4 w-4" />
           </Button>

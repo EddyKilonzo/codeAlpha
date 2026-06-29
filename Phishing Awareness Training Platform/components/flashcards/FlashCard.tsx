@@ -13,31 +13,38 @@ interface Props {
 
 export function FlashCard({ card, isFlipped, onFlip }: Props) {
   return (
-    <div
+    <motion.div
       className="relative w-full cursor-pointer"
       style={{ perspective: 1200 }}
       onClick={onFlip}
+      whileHover={{ y: -3, transition: { duration: 0.18 } }}
+      whileTap={{ scale: 0.985, transition: { duration: 0.1 } }}
     >
       <motion.div
         className="relative w-full"
         style={{ transformStyle: 'preserve-3d' }}
         animate={{ rotateY: isFlipped ? 180 : 0 }}
-        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+        transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         {/* FRONT */}
         <div
-          className="rounded-2xl border border-border bg-card shadow-lg p-8 min-h-[280px] flex flex-col items-center justify-center text-center"
+          className="rounded-2xl border border-border bg-card shadow-lg p-6 sm:p-8 min-h-[240px] sm:min-h-[280px] flex flex-col items-center justify-center text-center transition-shadow hover:shadow-xl"
           style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
         >
-          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-brand/10">
+          <motion.div
+            className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-brand/10"
+            animate={!isFlipped ? { scale: [1, 1.05, 1] } : {}}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          >
             <Target className="h-6 w-6 text-brand" />
-          </div>
+          </motion.div>
           <h3 className="text-xl font-bold text-foreground leading-tight max-w-sm">
             {card.front}
           </h3>
           <div className="mt-6 flex items-center gap-1.5 text-xs text-muted-foreground">
             <RotateCcw className="h-3 w-3" />
-            <span>Click to reveal</span>
+            <span className="hidden sm:inline">Click to reveal</span>
+            <span className="sm:hidden">Tap to reveal</span>
           </div>
         </div>
 
@@ -51,9 +58,14 @@ export function FlashCard({ card, isFlipped, onFlip }: Props) {
           }}
         >
           <div className="w-full space-y-4">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-semibold text-brand uppercase tracking-widest">
+            <motion.div
+              className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-semibold text-brand uppercase tracking-widest"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={isFlipped ? { scale: 1, opacity: 1 } : { scale: 0.8, opacity: 0 }}
+              transition={{ delay: 0.25, duration: 0.2 }}
+            >
               Answer
-            </div>
+            </motion.div>
             <p className="text-sm font-medium text-foreground leading-relaxed">
               {card.back}
             </p>
@@ -67,7 +79,7 @@ export function FlashCard({ card, isFlipped, onFlip }: Props) {
           </div>
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   )
 }
 

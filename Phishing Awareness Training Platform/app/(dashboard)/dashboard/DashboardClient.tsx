@@ -1,14 +1,15 @@
 "use client"
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShieldAlert, Fish, Crosshair, Zap, FileSearch, ShieldCheck,
-  Lock, CheckCircle2, ChevronRight, Clock, Star, Flame,
-  Trophy, BookOpen, GraduationCap,
+  Lock, LockOpen, CheckCircle2, ChevronRight, Clock, Star,
+  Trophy, BookOpen, GraduationCap, Flame, PlayCircle,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useProgress } from '@/hooks/useProgress'
 import { MODULES } from '@/data/modules'
@@ -20,18 +21,50 @@ const MODULE_ICONS: Record<string, React.ElementType> = {
   ShieldAlert, Fish, Crosshair, Zap, FileSearch, ShieldCheck,
 }
 
-const MODULE_GRADIENT: Record<string, string> = {
-  introduction: 'from-brand to-emerald-500',
-  'types-of-phishing': 'from-blue-500 to-cyan-500',
-  'attacker-operations': 'from-orange-500 to-red-500',
-  'advanced-threats': 'from-purple-500 to-violet-600',
-  'case-studies': 'from-rose-500 to-pink-600',
-  'defense-best-practices': 'from-teal-500 to-brand',
+// Dashboard skeleton shown before localStorage hydrates
+function DashboardSkeleton() {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-6">
+      {/* Header skeleton */}
+      <div className="space-y-2">
+        <div className="h-7 w-56 rounded-lg bg-muted skeleton" />
+        <div className="h-4 w-72 rounded-md bg-muted skeleton" />
+      </div>
+      {/* Stats skeleton */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-border bg-card p-4 space-y-2">
+            <div className="h-4 w-16 rounded bg-muted skeleton" />
+            <div className="h-8 w-20 rounded-lg bg-muted skeleton" />
+          </div>
+        ))}
+      </div>
+      {/* Module list skeleton */}
+      <div className="space-y-3">
+        <div className="h-4 w-20 rounded bg-muted skeleton" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="h-0.5 w-full bg-muted" />
+            <div className="flex items-center gap-4 p-4">
+              <div className="h-12 w-12 rounded-xl bg-muted skeleton shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-40 rounded bg-muted skeleton" />
+                <div className="h-3 w-64 rounded bg-muted skeleton" />
+                <div className="h-3 w-32 rounded bg-muted skeleton" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export function DashboardClient() {
   const { progress, isHydrated, isModuleUnlocked, isModuleCompleted, getQuizScore, updateStreak, checkStreakAchievements, checkXPAchievements } = useProgress()
   const [certOpen, setCertOpen] = useState(false)
+  const [justUnlockedId, setJustUnlockedId] = useState<string | null>(null)
+  const prevUnlockedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     if (!isHydrated) return
@@ -40,82 +73,130 @@ export function DashboardClient() {
     checkXPAchievements(progress.xp)
   }, [isHydrated]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!isHydrated) return null
+  // Detect newly unlocked modules and play unlock animation
+  useEffect(() => {
+    if (!isHydrated) return
+    const currentUnlocked = new Set(MODULES.filter((m) => isModuleUnlocked(m.id)).map((m) => m.id))
+    const prev = prevUnlockedRef.current
+    if (prev.size > 0) {
+      for (const id of currentUnlocked) {
+        if (!prev.has(id)) {
+          setJustUnlockedId(id)
+          const t = setTimeout(() => setJustUnlockedId(null), 2200)
+          return () => clearTimeout(t)
+        }
+      }
+    }
+    prevUnlockedRef.current = currentUnlocked
+  }, [isHydrated, progress.completedModules]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // All hooks must be called before any conditional return
+  const totalModules = MODULES.length
+  const completedCount = isHydrated ? progress.completedModules.length : 0
+  const animatedXP = useCountUp(isHydrated ? progress.xp : 0, 1200, isHydrated)
+  const animatedStreak = useCountUp(isHydrated ? progress.streak : 0, 800, isHydrated)
+  const animatedCompleted = useCountUp(completedCount, 600, isHydrated)
+
+  if (!isHydrated) return <DashboardSkeleton />
 
   const levelInfo = getLevelInfo(getLevelFromXP(progress.xp))
-  const totalModules = MODULES.length
-  const completedCount = progress.completedModules.length
   const overallPct = Math.round((completedCount / totalModules) * 100)
 
-  // Animated counters
-  const animatedXP = useCountUp(progress.xp, 1200)
-  const animatedStreak = useCountUp(progress.streak, 800)
-  const animatedCompleted = useCountUp(completedCount, 600)
+  const resumeModule = progress.lastActiveModule
+    ? MODULES.find((m) => m.id === progress.lastActiveModule && !isModuleCompleted(m.id))
+    : null
+  const resumeTab = resumeModule ? (progress.lastActiveTabByModule[resumeModule.id] ?? 'lesson') : null
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-6 sm:space-y-8">
       {/* Welcome header */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-foreground">
-          {progress.userName ? `Welcome back, ${progress.userName}` : 'PhishGuard Training'}
+        <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+          {progress.userName ? `Welcome back, ${progress.userName}` : 'PhishShield Training'}
         </h1>
         <p className="text-sm text-muted-foreground">
           Master phishing awareness — one module at a time.
         </p>
       </div>
 
+      {/* Resume prompt — shown when user left mid-module */}
+      {resumeModule && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-brand/25 bg-brand/5 px-4 py-3 flex items-center gap-3 shadow-premium-sm"
+        >
+          <PlayCircle className="h-5 w-5 text-brand shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">Continue: {resumeModule.title}</p>
+            <p className="text-xs text-muted-foreground capitalize">{resumeTab} section</p>
+          </div>
+          <Link
+            href={`/modules/${resumeModule.id}`}
+            className="shrink-0 flex items-center gap-1.5 rounded-lg border border-brand text-brand px-3 py-1.5 text-xs font-bold hover:bg-brand/[0.07] transition-colors"
+          >
+            Resume <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </motion.div>
+      )}
+
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+        {/* XP */}
+        <div className="card-lift rounded-xl border border-border bg-card p-4 space-y-1 shadow-premium-sm">
           <div className="flex items-center gap-2">
-            <Star className="h-4 w-4 text-amber-500" />
+            <Star className="h-4 w-4 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">Total XP</span>
           </div>
-          <p className="text-2xl font-black text-foreground">{animatedXP.toLocaleString()}</p>
+          <p className="text-2xl font-black font-mono text-foreground">{animatedXP.toLocaleString()}</p>
+          <p className="text-[10px] text-brand font-semibold">+XP per module</p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+        {/* Level */}
+        <div className="card-lift rounded-xl border border-border bg-card p-4 space-y-1 shadow-premium-sm">
           <div className="flex items-center gap-2">
             <Trophy className="h-4 w-4 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">Level</span>
           </div>
-          <div>
-            <p className="text-2xl font-black text-foreground">{levelInfo.level}</p>
-            <p className="text-[10px] text-brand font-semibold">{levelInfo.title}</p>
-          </div>
+          <p className="text-2xl font-black font-mono text-foreground">{levelInfo.level}</p>
+          <p className="text-[10px] text-brand font-semibold">{levelInfo.title}</p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+        {/* Streak */}
+        <div className="card-lift rounded-xl border border-border bg-card p-4 space-y-1 shadow-premium-sm">
           <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-orange-500" />
+            <Flame className="h-4 w-4 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">Streak</span>
           </div>
-          <p className="text-2xl font-black text-foreground">{animatedStreak}
-            <span className="text-sm font-normal text-muted-foreground ml-1">days</span>
+          <p className="text-2xl font-black font-mono text-foreground">
+            {animatedStreak}
+            <span className="text-sm font-normal font-sans text-muted-foreground ml-1">days</span>
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+        {/* Modules */}
+        <div className="card-lift rounded-xl border border-border bg-card p-4 space-y-1 shadow-premium-sm">
           <div className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-blue-500" />
+            <BookOpen className="h-4 w-4 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">Modules</span>
           </div>
-          <p className="text-2xl font-black text-foreground">{animatedCompleted}
-            <span className="text-sm font-normal text-muted-foreground">/{totalModules}</span>
+          <p className="text-2xl font-black font-mono text-foreground">
+            {animatedCompleted}
+            <span className="text-sm font-normal font-sans text-muted-foreground">/{totalModules}</span>
           </p>
         </div>
       </div>
 
       {/* Overall progress */}
       {completedCount > 0 && (
-        <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 space-y-3">
+        <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 space-y-3 shadow-premium-sm">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-foreground">Overall Progress</span>
             <span className="text-sm font-bold text-brand">{overallPct}%</span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-brand"
+              className="h-full rounded-full bg-gradient-to-r from-brand to-emerald-400"
               initial={{ width: 0 }}
               animate={{ width: `${overallPct}%` }}
               transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -138,7 +219,6 @@ export function DashboardClient() {
             const isCompleted = isModuleCompleted(mod.id)
             const quizScore = getQuizScore(mod.id)
             const isNext = !isCompleted && isUnlocked
-            const gradient = MODULE_GRADIENT[mod.id] ?? 'from-brand to-emerald-500'
 
             return (
               <motion.div
@@ -150,22 +230,65 @@ export function DashboardClient() {
                 {isUnlocked ? (
                   <Link href={`/modules/${mod.id}`}>
                     <div className={cn(
-                      'group relative rounded-xl border transition-all duration-200 overflow-hidden',
-                      isNext && 'border-brand/40 shadow-sm shadow-brand/10',
+                      'group relative rounded-xl border card-lift overflow-hidden cursor-pointer shadow-premium-sm',
+                      isNext && 'border-brand/40',
                       isCompleted && 'border-brand/20',
                       !isNext && !isCompleted && 'border-border',
-                      'hover:shadow-md hover:border-brand/50 cursor-pointer'
                     )}>
-                      {/* Gradient top strip */}
-                      <div className={cn('h-0.5 w-full bg-gradient-to-r', gradient)} />
+                      {/* Pulsing unlock glow — only on the "Up Next" card */}
+                      {isNext && (
+                        <motion.div
+                          className="absolute inset-0 rounded-xl pointer-events-none"
+                          animate={{ boxShadow: ['0 0 0 0 rgba(22,163,74,0)', '0 0 0 3px rgba(22,163,74,0.14)', '0 0 0 0 rgba(22,163,74,0)'] }}
+                          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                      )}
+
+                      {/* Brand accent top strip */}
+                      <div className={cn(
+                        'h-0.5 w-full',
+                        isCompleted || isNext ? 'bg-brand' : 'bg-muted'
+                      )} />
 
                       <div className="flex items-center gap-4 p-4 bg-card">
-                        {/* Module icon */}
+                        {/* Module icon — monochromatic */}
                         <div className={cn(
-                          'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br',
-                          gradient
+                          'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border overflow-hidden',
+                          isCompleted
+                            ? 'bg-brand/10 border-brand/20'
+                            : isNext
+                              ? 'bg-brand/[0.08] border-brand/15'
+                              : 'bg-muted border-border'
                         )}>
-                          <Icon className="h-6 w-6 text-white" />
+                          {/* Unlock flash overlay */}
+                          {justUnlockedId === mod.id && (
+                            <motion.div
+                              className="absolute inset-0 bg-brand/20 rounded-xl"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: [0, 0.8, 0] }}
+                              transition={{ duration: 0.9, ease: 'easeOut' }}
+                            />
+                          )}
+                          {isCompleted ? (
+                            <CheckCircle2 className="h-6 w-6 text-brand" />
+                          ) : justUnlockedId === mod.id ? (
+                            <AnimatePresence mode="wait">
+                              <motion.span
+                                key="lock-open"
+                                initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
+                                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                                exit={{ scale: 1.2, opacity: 0 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                              >
+                                <LockOpen className="h-6 w-6 text-brand" />
+                              </motion.span>
+                            </AnimatePresence>
+                          ) : (
+                            <Icon className={cn(
+                              'h-6 w-6',
+                              isNext ? 'text-brand' : 'text-muted-foreground'
+                            )} />
+                          )}
                         </div>
 
                         <div className="flex-1 min-w-0 space-y-1">
@@ -177,15 +300,19 @@ export function DashboardClient() {
                               </Badge>
                             )}
                             {isNext && !isCompleted && (
-                              <Badge className="bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50 text-[10px]">
+                              <Badge className="bg-brand/[0.08] text-brand border-brand/25 text-[10px]">
                                 Up Next
                               </Badge>
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground line-clamp-1">{mod.description}</p>
                           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {mod.estimatedMinutes} min</span>
-                            <span className="flex items-center gap-1"><Star className="h-3 w-3 text-amber-500" /> +{mod.xpReward} XP</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {mod.estimatedMinutes} min
+                            </span>
+                            <span className="flex items-center gap-1 text-brand font-semibold">
+                              <Star className="h-3 w-3" /> +{mod.xpReward} XP
+                            </span>
                             {quizScore && (
                               <span className="flex items-center gap-1 text-brand font-medium">
                                 <GraduationCap className="h-3 w-3" /> {quizScore.score}%
@@ -202,12 +329,10 @@ export function DashboardClient() {
                     </div>
                   </Link>
                 ) : (
-                  <div className={cn(
-                    'rounded-xl border border-border/60 overflow-hidden opacity-60',
-                  )}>
+                  <div className="rounded-xl border border-border/60 overflow-hidden opacity-50">
                     <div className="h-0.5 w-full bg-muted" />
                     <div className="flex items-center gap-4 p-4 bg-card">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted border border-border">
                         <Lock className="h-5 w-5 text-muted-foreground" />
                       </div>
                       <div className="flex-1 min-w-0 space-y-1">
@@ -221,7 +346,7 @@ export function DashboardClient() {
                           <span className="flex items-center gap-1"><Star className="h-3 w-3" /> +{mod.xpReward} XP</span>
                         </div>
                       </div>
-                      <Lock className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+                      <Lock className="h-4 w-4 shrink-0 text-muted-foreground/40" />
                     </div>
                   </div>
                 )}
@@ -236,21 +361,19 @@ export function DashboardClient() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-brand/30 bg-gradient-to-br from-brand/5 to-brand/10 p-6 text-center space-y-3"
+          className="rounded-xl border border-brand/30 bg-brand/5 p-6 text-center space-y-3 shadow-premium-sm"
         >
           <Trophy className="h-10 w-10 text-brand mx-auto" />
           <div>
             <h3 className="font-bold text-foreground text-lg">Course Complete!</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              You have completed all 6 modules. Your certificate of completion is ready.
+              You have completed all 6 modules. Your certificate is ready to download.
             </p>
           </div>
-          <button
-            onClick={() => setCertOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand/90 transition-colors"
-          >
+          <Button onClick={() => setCertOpen(true)} size="lg" className="px-8">
+            <Trophy className="h-4 w-4" />
             Download Certificate
-          </button>
+          </Button>
         </motion.div>
       )}
 

@@ -103,7 +103,7 @@ export function HintSystem({ hints, onUseHint, disabled }: Props) {
             className="absolute bottom-full mb-3 left-0 z-50 w-80"
           >
             {/* Glass card */}
-            <div className="relative overflow-hidden rounded-2xl border border-amber-200/80 dark:border-amber-700/40 bg-white/95 dark:bg-zinc-900/95 shadow-xl backdrop-blur-md">
+            <div className="relative overflow-hidden rounded-2xl border border-amber-200/60 dark:border-amber-700/30 bg-background/80 shadow-2xl backdrop-blur-xl">
               {/* Shimmer overlay */}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-50/40 via-transparent to-transparent dark:from-amber-900/10" />
 
@@ -225,7 +225,7 @@ export function HintSystem({ hints, onUseHint, disabled }: Props) {
             </div>
 
             {/* Arrow pointing down to button */}
-            <div className="absolute -bottom-1.5 left-5 h-3 w-3 rotate-45 border-b border-r border-amber-200/80 dark:border-amber-700/40 bg-white/95 dark:bg-zinc-900/95" />
+            <div className="absolute -bottom-1.5 left-5 h-3 w-3 rotate-45 border-b border-r border-amber-200/60 dark:border-amber-700/30 bg-background/80 backdrop-blur-xl" />
           </motion.div>
         )}
       </AnimatePresence>
