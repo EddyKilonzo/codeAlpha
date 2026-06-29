@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShieldAlert, Fish, Crosshair, Zap, FileSearch, ShieldCheck,
@@ -14,8 +15,13 @@ import { cn } from '@/lib/utils'
 import { useProgress } from '@/hooks/useProgress'
 import { MODULES } from '@/data/modules'
 import { getLevelFromXP, getLevelInfo } from '@/lib/levelUtils'
-import { CertificateModal } from '@/components/certificate/CertificateModal'
 import { useCountUp } from '@/hooks/useCountUp'
+
+// html2canvas + jsPDF are ~500 kB — load only when user opens the certificate modal
+const CertificateModal = dynamic(
+  () => import('@/components/certificate/CertificateModal').then(m => ({ default: m.CertificateModal })),
+  { ssr: false }
+)
 
 const MODULE_ICONS: Record<string, React.ElementType> = {
   ShieldAlert, Fish, Crosshair, Zap, FileSearch, ShieldCheck,
@@ -90,22 +96,22 @@ export function DashboardClient() {
     prevUnlockedRef.current = currentUnlocked
   }, [isHydrated, progress.completedModules]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // All hooks must be called before any conditional return
   const totalModules = MODULES.length
   const completedCount = isHydrated ? progress.completedModules.length : 0
   const animatedXP = useCountUp(isHydrated ? progress.xp : 0, 1200, isHydrated)
   const animatedStreak = useCountUp(isHydrated ? progress.streak : 0, 800, isHydrated)
   const animatedCompleted = useCountUp(completedCount, 600, isHydrated)
+  const levelInfo = useMemo(() => getLevelInfo(getLevelFromXP(progress.xp)), [progress.xp])
+  const overallPct = useMemo(() => Math.round((completedCount / totalModules) * 100), [completedCount, totalModules])
+  const resumeModule = useMemo(() =>
+    progress.lastActiveModule
+      ? MODULES.find((m) => m.id === progress.lastActiveModule && !isModuleCompleted(m.id))
+      : null,
+    [progress.lastActiveModule, progress.completedModules] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const resumeTab = resumeModule ? (progress.lastActiveTabByModule[resumeModule.id] ?? 'lesson') : null
 
   if (!isHydrated) return <DashboardSkeleton />
-
-  const levelInfo = getLevelInfo(getLevelFromXP(progress.xp))
-  const overallPct = Math.round((completedCount / totalModules) * 100)
-
-  const resumeModule = progress.lastActiveModule
-    ? MODULES.find((m) => m.id === progress.lastActiveModule && !isModuleCompleted(m.id))
-    : null
-  const resumeTab = resumeModule ? (progress.lastActiveTabByModule[resumeModule.id] ?? 'lesson') : null
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-6 sm:space-y-8">

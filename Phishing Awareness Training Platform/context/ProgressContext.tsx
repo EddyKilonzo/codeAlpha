@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react'
 import type { UserProgress, QuizScore, Achievement, FlashcardProgress, GamificationNotification } from '@/types'
@@ -356,8 +357,13 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     setPendingNotifications((q) => q.filter((n) => n.id !== id))
   }, [])
 
+  const contextValue = useMemo(
+    () => ({ state, dispatch, isHydrated, pendingNotifications, clearNotification }),
+    [state, isHydrated, pendingNotifications, clearNotification]
+  )
+
   return (
-    <ProgressContext.Provider value={{ state, dispatch, isHydrated, pendingNotifications, clearNotification }}>
+    <ProgressContext.Provider value={contextValue}>
       {children}
     </ProgressContext.Provider>
   )

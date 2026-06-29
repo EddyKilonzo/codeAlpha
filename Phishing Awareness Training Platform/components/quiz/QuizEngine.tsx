@@ -467,6 +467,10 @@ function checkAnswer(question: Question, userAnswer: unknown): boolean {
 export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
   const { addXP, saveQuizScore, completeModule } = useProgress()
 
+  // Cap at 5 questions — pick a random 5 each attempt
+  const questions = quiz.questions.slice(0, 5)
+  const cappedQuiz = { ...quiz, questions }
+
   const [state, setState] = useState<QuizState>({
     phase: 'question',
     currentIndex: 0,
@@ -478,9 +482,9 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
     totalXP: 0,
   })
 
-  const question = quiz.questions[state.currentIndex]
+  const question = cappedQuiz.questions[state.currentIndex]
   const currentAnswer = state.answers[question?.id ?? '']
-  const isLast = state.currentIndex === quiz.questions.length - 1
+  const isLast = state.currentIndex === cappedQuiz.questions.length - 1
 
   // Auto-initialize timeline ordering and match-pair so Submit is available on first render
   useEffect(() => {
@@ -534,15 +538,15 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
     if (isLast) {
       const allResults = [...state.resultItems, resultItem]
       const correctCount = allResults.filter((r) => r.correct).length
-      const score = Math.round((correctCount / quiz.questions.length) * 100)
+      const score = Math.round((correctCount / cappedQuiz.questions.length) * 100)
       const passed = score >= PASSING_SCORE
       const baseXP = passed ? XP_REWARDS.QUIZ_PASS : 0
       const perfectBonus = score === 100 ? XP_REWARDS.QUIZ_PERFECT_BONUS : 0
       const totalXP = baseXP + perfectBonus + xpForQuestion
 
       if (totalXP > 0) addXP(totalXP)
-      saveQuizScore({ moduleId: quiz.moduleId, score, attempts: 1, passed, completedAt: new Date().toISOString(), xpEarned: totalXP })
-      if (passed) completeModule(quiz.moduleId)
+      saveQuizScore({ moduleId: cappedQuiz.moduleId, score, attempts: 1, passed, completedAt: new Date().toISOString(), xpEarned: totalXP })
+      if (passed) completeModule(cappedQuiz.moduleId)
 
       setState((s) => ({
         ...s,
@@ -580,21 +584,21 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
       <QuizResults
         results={state.resultItems}
         totalXP={state.totalXP}
-        moduleId={quiz.moduleId}
+        moduleId={cappedQuiz.moduleId}
         onRetry={handleRetry}
         onContinue={onComplete}
       />
     )
   }
 
-  const progress = ((state.currentIndex) / quiz.questions.length) * 100
+  const progress = ((state.currentIndex) / cappedQuiz.questions.length) * 100
 
   return (
     <div className="rounded-2xl border border-border/40 bg-card/80 backdrop-blur-sm shadow-sm p-5 sm:p-6 space-y-6">
       {/* Progress */}
       <div className="space-y-2">
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Question {state.currentIndex + 1} of {quiz.questions.length}</span>
+          <span>Question {state.currentIndex + 1} of {cappedQuiz.questions.length}</span>
           <span className="capitalize text-brand">{question.type.replace(/-/g, ' ')}</span>
         </div>
         <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">

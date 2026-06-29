@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, AlertTriangle, CheckCircle2, Info, Trophy, Eye } from 'lucide-react'
+import { Shield, AlertTriangle, CheckCircle2, Info, Trophy, Eye, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Simulation, SimulationFlag } from '@/types'
 
@@ -20,6 +20,10 @@ export function SimulationShell({ simulation, children }: Props) {
   const [lastFound, setLastFound] = useState<SimulationFlag | null>(null)
   const [isComplete, setIsComplete] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
+  const [hintsRevealed, setHintsRevealed] = useState(0)
+
+  const hints = simulation.hints ?? []
+  const canRevealHint = hintsRevealed < hints.length && !isComplete
 
   const totalPoints = simulation.flags.reduce((s, f) => s + f.pointValue, 0)
   const earnedPoints = foundFlags.reduce((s, id) => {
@@ -82,6 +86,41 @@ export function SimulationShell({ simulation, children }: Props) {
         </p>
       </div>
 
+      {/* Hints */}
+      {hints.length > 0 && (
+        <div className="space-y-2">
+          <AnimatePresence initial={false}>
+            {hints.slice(0, hintsRevealed).map((hint, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50/70 dark:bg-amber-950/20 px-3 py-2"
+              >
+                <Lightbulb className="h-3.5 w-3.5 shrink-0 text-amber-500 mt-0.5" />
+                <p className="text-xs text-amber-800 dark:text-amber-300 leading-snug">{hint}</p>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {!isComplete && (
+            <button
+              onClick={() => setHintsRevealed((n) => n + 1)}
+              disabled={!canRevealHint}
+              className={cn(
+                'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
+                canRevealHint
+                  ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50'
+                  : 'border-border text-muted-foreground opacity-50 cursor-default'
+              )}
+            >
+              <Lightbulb className="h-3.5 w-3.5" />
+              {canRevealHint ? `Hint (${hints.length - hintsRevealed} left)` : 'All hints revealed'}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Simulation content */}
       <div className="relative">
         {children({ onFlag, foundFlags, isComplete })}
@@ -93,26 +132,23 @@ export function SimulationShell({ simulation, children }: Props) {
               initial={{ opacity: 0, y: 16, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.95 }}
-              className={cn(
-                'absolute top-3 right-3 z-50 max-w-xs rounded-xl border p-3.5 shadow-lg backdrop-blur-sm',
-                lastFound.type === 'malicious' && 'border-red-300 dark:border-red-700 bg-red-50/95 dark:bg-red-950/90',
-                lastFound.type === 'warning' && 'border-amber-300 dark:border-amber-700 bg-amber-50/95 dark:bg-amber-950/90',
-                lastFound.type === 'safe' && 'border-brand/40 bg-brand/5',
-              )}
+              className="absolute top-3 right-3 z-50 max-w-xs rounded-xl border border-brand/30 bg-white/95 dark:bg-zinc-900/95 p-3.5 shadow-lg shadow-brand/10 backdrop-blur-sm"
             >
               <div className="flex items-start gap-2">
-                {lastFound.type === 'malicious' && <AlertTriangle className="h-4 w-4 shrink-0 text-red-500 mt-0.5" />}
-                {lastFound.type === 'warning' && <Info className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />}
-                {lastFound.type === 'safe' && <CheckCircle2 className="h-4 w-4 shrink-0 text-brand mt-0.5" />}
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-brand mt-0.5" />
                 <div>
-                  <p className={cn(
-                    'text-xs font-bold',
-                    lastFound.type === 'malicious' ? 'text-red-700 dark:text-red-300' :
-                    lastFound.type === 'warning' ? 'text-amber-700 dark:text-amber-300' : 'text-brand'
-                  )}>
-                    +{lastFound.pointValue} pts — {lastFound.label}
-                  </p>
-                  <p className="text-[11px] text-foreground/80 mt-0.5 leading-snug">{lastFound.description}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-bold text-brand">+{lastFound.pointValue} pts — {lastFound.label}</p>
+                    <span className={cn(
+                      'shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+                      lastFound.type === 'malicious' ? 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400' :
+                      lastFound.type === 'warning' ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' :
+                      'bg-brand/10 text-brand'
+                    )}>
+                      {lastFound.type}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-foreground/70 mt-0.5 leading-snug">{lastFound.description}</p>
                 </div>
               </div>
             </motion.div>

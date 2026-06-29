@@ -24,7 +24,7 @@ function FlagTrigger({ flag, onFlag, found, className, children }: FlagButtonPro
       className={cn(
         'cursor-pointer rounded transition-all outline-none group',
         !found && 'hover:ring-2 hover:ring-red-400/50 hover:ring-offset-1',
-        found && 'ring-2 ring-red-400/60',
+        found && 'ring-2 ring-brand/60 bg-brand/5',
         className
       )}
     >
@@ -60,13 +60,15 @@ export function LoginPageSimulation({ simulation }: { simulation: Simulation }) 
               <div className="h-3 w-3 rounded-full bg-green-500/80" />
             </div>
 
-            {/* Address bar */}
-            <FlagTrigger flag={flagMap['f1']} onFlag={onFlag} found={foundFlags.includes('f1')} className="flex-1">
-              <div className="flex items-center gap-1.5 rounded-md bg-white dark:bg-zinc-700 border border-border px-2.5 py-1">
-                <Lock className="h-3 w-3 text-green-500 shrink-0" />
-                <span className="text-[11px] text-foreground/80 font-mono truncate">{content.url}</span>
-              </div>
-            </FlagTrigger>
+            {/* Address bar — padlock (f4) + URL (f1) are separate click zones */}
+            <div className="flex flex-1 items-center gap-0.5 rounded-md bg-white dark:bg-zinc-700 border border-border px-1.5 py-1">
+              <FlagTrigger flag={flagMap['f4']} onFlag={onFlag} found={foundFlags.includes('f4')} className="shrink-0 p-0.5">
+                <Lock className={cn('h-3 w-3', foundFlags.includes('f4') ? 'text-brand' : 'text-green-500')} />
+              </FlagTrigger>
+              <FlagTrigger flag={flagMap['f1']} onFlag={onFlag} found={foundFlags.includes('f1')} className="flex-1 min-w-0 px-1">
+                <span className="text-[11px] text-foreground/80 font-mono truncate block">{content.url}</span>
+              </FlagTrigger>
+            </div>
           </div>
 
           {/* Page content */}
@@ -114,7 +116,7 @@ export function LoginPageSimulation({ simulation }: { simulation: Simulation }) 
                         placeholder={field.placeholder}
                         value={formValues[field.label] ?? ''}
                         onChange={(e) => setFormValues((v) => ({ ...v, [field.label]: e.target.value }))}
-                        onClick={() => onFlag('f2')}
+                        onClick={() => isPayPal && onFlag('f2')}
                         className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand/40"
                       />
                       {field.type === 'password' && (

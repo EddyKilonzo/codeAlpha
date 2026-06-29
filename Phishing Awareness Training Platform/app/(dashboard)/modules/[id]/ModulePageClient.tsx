@@ -1,8 +1,10 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { BookOpen, CreditCard, Swords, GraduationCap, Lock, CheckCircle2, Clock, Star, ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -11,16 +13,6 @@ import { MODULES } from '@/data/modules'
 import { FLASHCARD_DECKS } from '@/data/flashcards'
 import { QUIZZES } from '@/data/quizzes'
 import { SIMULATIONS } from '@/data/simulations'
-import { FlashcardDeck } from '@/components/flashcards/FlashcardDeck'
-import { QuizEngine } from '@/components/quiz/QuizEngine'
-import { VoiceSummaryPlayer } from '@/components/voice/VoiceSummaryPlayer'
-import { OutlookEmailSimulation, GmailSimulation } from '@/components/simulations/EmailSimulation'
-import { LoginPageSimulation } from '@/components/simulations/LoginPageSimulation'
-import { SMSSimulation } from '@/components/simulations/SMSSimulation'
-import { TeamsSimulation } from '@/components/simulations/ChatSimulation'
-import { BrowserWarningSimulation } from '@/components/simulations/BrowserWarningSimulation'
-
-// Module content
 import { INTRODUCTION_CONTENT, INTRODUCTION_TAKEAWAYS } from '@/data/content/introduction'
 import { PHISHING_TYPES_CONTENT, PHISHING_TYPES_TAKEAWAYS } from '@/data/content/types-of-phishing'
 import { ATTACKER_OPERATIONS_CONTENT, ATTACKER_OPERATIONS_TAKEAWAYS } from '@/data/content/attacker-operations'
@@ -31,8 +23,67 @@ import { LessonSection } from '@/components/lessons/LessonSection'
 import { LessonReadingProgress } from '@/components/lessons/LessonReadingProgress'
 import { CaseStudyCard } from '@/components/case-studies/CaseStudyCard'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import type { Module } from '@/types'
 
-import type { Module, Simulation } from '@/types'
+// ── Heavy tab components — lazy loaded to keep initial JS small ───────────────
+const FlashcardDeck = dynamic(
+  () => import('@/components/flashcards/FlashcardDeck').then(m => ({ default: m.FlashcardDeck })),
+  {
+    loading: () => (
+      <div className="space-y-5 animate-pulse">
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-2">
+            <div className="h-4 w-20 rounded bg-muted" />
+            <div className="h-1.5 w-36 rounded-full bg-muted" />
+          </div>
+          <div className="flex gap-1.5">
+            <div className="h-8 w-20 rounded-lg bg-muted" />
+            <div className="h-8 w-16 rounded-lg bg-muted" />
+          </div>
+        </div>
+        <div className="h-64 sm:h-72 w-full rounded-2xl border border-border bg-muted/30" />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="h-12 rounded-xl bg-muted" />
+          <div className="h-12 rounded-xl bg-muted" />
+        </div>
+      </div>
+    ),
+  }
+)
+
+const QuizEngine = dynamic(
+  () => import('@/components/quiz/QuizEngine').then(m => ({ default: m.QuizEngine })),
+  {
+    loading: () => (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-2 w-full rounded-full bg-muted" />
+        <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
+          <div className="h-5 w-3/4 rounded bg-muted" />
+          <div className="space-y-2.5">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-12 rounded-xl bg-muted" />
+            ))}
+          </div>
+        </div>
+        <div className="h-11 w-28 rounded-xl bg-muted ml-auto" />
+      </div>
+    ),
+  }
+)
+
+const VoiceSummaryPlayer = dynamic(
+  () => import('@/components/voice/VoiceSummaryPlayer').then(m => ({ default: m.VoiceSummaryPlayer })),
+  { ssr: false }
+)
+
+const SimulationRenderer = dynamic(
+  () => import('@/components/simulations/SimulationRenderer').then(m => ({ default: m.SimulationRenderer })),
+  {
+    loading: () => (
+      <div className="h-80 rounded-2xl border border-border bg-muted/30 animate-pulse" />
+    ),
+  }
+)
 
 type Tab = 'lesson' | 'flashcards' | 'simulations' | 'quiz'
 
@@ -45,22 +96,14 @@ const CONTENT_MAP: Record<string, { sections: unknown[]; takeaways?: string[] }>
   'defense-best-practices': { sections: DEFENSE_CONTENT, takeaways: DEFENSE_TAKEAWAYS },
 }
 
-function SimulationRenderer({ sim }: { sim: Simulation }) {
-  if (sim.type === 'email-outlook') return <OutlookEmailSimulation simulation={sim} />
-  if (sim.type === 'email-gmail') return <GmailSimulation simulation={sim} />
-  if (sim.type === 'login-page') return <LoginPageSimulation simulation={sim} />
-  if (sim.type === 'sms') return <SMSSimulation simulation={sim} />
-  if (sim.type === 'teams-message') return <TeamsSimulation simulation={sim} />
-  if (sim.type === 'browser-warning') return <BrowserWarningSimulation simulation={sim} />
-  return <p className="text-sm text-muted-foreground">Simulation type not implemented yet.</p>
-}
-
 interface Props {
   module: Module
 }
 
 export function ModulePageClient({ module }: Props) {
   const { isHydrated, isModuleUnlocked, isModuleCompleted, getQuizScore, markLessonViewed, progress, checkModuleAchievements, setLastActive } = useProgress()
+  const router = useRouter()
+  const nextModule = MODULES.find(m => m.order === module.order + 1)
   const savedTab = (progress.lastActiveTabByModule[module.id] ?? 'lesson') as Tab
   const [activeTab, setActiveTab] = useState<Tab>(savedTab)
   const [quizDone, setQuizDone] = useState(false)
@@ -410,6 +453,7 @@ export function ModulePageClient({ module }: Props) {
                         setQuizDone(true)
                         setShowPostVoice(true)
                         checkModuleAchievements(progress.completedModules.length)
+                        router.push(nextModule ? `/modules/${nextModule.id}` : '/dashboard')
                       }}
                     />
                   </ErrorBoundary>

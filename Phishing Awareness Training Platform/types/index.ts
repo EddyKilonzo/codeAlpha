@@ -210,5 +210,6 @@ export interface Simulation {
   title: string
   description: string
   flags: SimulationFlag[]
+  hints?: string[]
   content: Record<string, unknown>
 }

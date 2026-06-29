@@ -33,8 +33,8 @@ function FlagZone({ flag, onFlag, found, children }: FlagZoneProps) {
     >
       {children}
       {found && (
-        <span className="absolute -top-2 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white z-10">
-          !</span>
+        <span className="absolute -top-2 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[8px] font-bold text-white z-10">
+          ✓</span>
       )}
     </span>
   )
@@ -87,6 +87,7 @@ export function OutlookEmailSimulation({ simulation }: OutlookEmailProps) {
           {/* Body */}
           <div className="p-5 space-y-4">
             {content.body.split('\n\n').map((para, i) => {
+              // Generic greeting — always f4
               if (para.startsWith('Dear')) {
                 return (
                   <FlagZone key={i} flag={flagMap['f4']} onFlag={onFlag} found={foundFlags.includes('f4')}>
@@ -94,13 +95,43 @@ export function OutlookEmailSimulation({ simulation }: OutlookEmailProps) {
                   </FlagZone>
                 )
               }
-              if (para.includes('expires') || para.includes('URGENT') || para.includes('time-sensitive') || para.includes('urgent')) {
+              // Mobile/phone redirect cue — f4 (QR sim)
+              if (para.includes('mobile device') || para.includes('phone camera')) {
+                return (
+                  <FlagZone key={i} flag={flagMap['f4']} onFlag={onFlag} found={foundFlags.includes('f4')}>
+                    <p className="text-sm text-foreground/90 leading-relaxed px-1 py-0.5 whitespace-pre-line">{para}</p>
+                  </FlagZone>
+                )
+              }
+              // Financial wire transfer content — f3 (BEC sim). Check before urgency.
+              if (para.includes('Amount:') || para.includes('Beneficiary') || para.includes('wire instructions')) {
+                return (
+                  <FlagZone key={i} flag={flagMap['f3']} onFlag={onFlag} found={foundFlags.includes('f3')}>
+                    <div className="rounded-md border border-border bg-muted/40 px-3 py-2.5 text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{para}</div>
+                  </FlagZone>
+                )
+              }
+              // Secrecy / bypass channels — f4. Check before urgency to avoid preemption.
+              if (para.includes('NDA') || para.includes('Do not discuss')) {
+                return (
+                  <FlagZone key={i} flag={flagMap['f4']} onFlag={onFlag} found={foundFlags.includes('f4')}>
+                    <p className="text-sm text-foreground/90 leading-relaxed px-1 py-0.5">{para}</p>
+                  </FlagZone>
+                )
+              }
+              // Urgency triggers — f2
+              if (
+                para.includes('expire') || para.includes('expiry') || para.includes('CRITICAL') ||
+                para.includes('URGENT') || para.includes('time-sensitive') || para.includes('urgent') ||
+                para.includes('today') || para.includes('Important:') || para.includes('must be completed')
+              ) {
                 return (
                   <FlagZone key={i} flag={flagMap['f2']} onFlag={onFlag} found={foundFlags.includes('f2')}>
                     <p className="text-sm text-foreground/90 leading-relaxed px-1 py-0.5">{para}</p>
                   </FlagZone>
                 )
               }
+              // Action buttons — f3
               if (para.includes('[RESET') || para.includes('[VERIFY') || para.includes('button')) {
                 return (
                   <div key={i}>
@@ -112,10 +143,11 @@ export function OutlookEmailSimulation({ simulation }: OutlookEmailProps) {
                   </div>
                 )
               }
+              // QR code block — f3 (sender is f1, urgency is f2, mobile redirect is f4)
               if (para.includes('[QR CODE')) {
                 return (
                   <div key={i} className="space-y-2">
-                    <FlagZone flag={flagMap['f1']} onFlag={onFlag} found={foundFlags.includes('f1')}>
+                    <FlagZone flag={flagMap['f3']} onFlag={onFlag} found={foundFlags.includes('f3')}>
                       <div className="inline-flex h-32 w-32 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted text-center">
                         <div className="space-y-1">
                           <div className="text-3xl">▦</div>
@@ -126,7 +158,8 @@ export function OutlookEmailSimulation({ simulation }: OutlookEmailProps) {
                   </div>
                 )
               }
-              if (para.includes('confidential') || para.includes('NDA') || para.includes('Do not discuss')) {
+              // Confidentiality fallback — f4
+              if (para.includes('confidential')) {
                 return (
                   <FlagZone key={i} flag={flagMap['f4']} onFlag={onFlag} found={foundFlags.includes('f4')}>
                     <p className="text-sm text-foreground/90 leading-relaxed px-1 py-0.5">{para}</p>
