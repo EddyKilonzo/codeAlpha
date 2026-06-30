@@ -67,8 +67,8 @@ function progressReducer(state: UserProgress, action: ProgressAction): UserProgr
       return action.payload
 
     case 'ADD_XP': {
-      const newXP = state.xp + action.payload.amount
-      const newTotalXP = state.totalXPEarned + action.payload.amount
+      const newXP = Math.max(0, state.xp + action.payload.amount)
+      const newTotalXP = Math.max(0, state.totalXPEarned + action.payload.amount)
       const newLevel = getLevelFromXP(newXP)
       return { ...state, xp: newXP, level: newLevel, totalXPEarned: newTotalXP }
     }

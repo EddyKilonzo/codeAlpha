@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="public/logo.png" alt="PhishShield Logo" width="100" />
+<img src="https://raw.githubusercontent.com/EddyKilonzo/codeAlpha/main/Phishing%20Awareness%20Training%20Platform/public/logo.png" alt="PhishShield Logo" width="100" />
 
 <br/>
 <br/>

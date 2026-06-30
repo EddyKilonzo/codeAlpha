@@ -154,10 +154,15 @@ export function QuizResults({ results, totalXP, moduleId, onRetry, onContinue }:
             {!result.correct && (
               <div className="pl-7 space-y-1">
                 <p className="text-[11px] text-red-600 dark:text-red-400">
-                  Your answer: {Array.isArray(result.userAnswer) ? result.userAnswer.join(', ') : result.userAnswer || 'No answer'}
+                  Your answer: {Array.isArray(result.userAnswer) ? result.userAnswer.join(' · ') : result.userAnswer || 'No answer'}
                 </p>
                 <p className="text-[11px] text-brand">
-                  Correct: {Array.isArray(result.question.answer) ? result.question.answer.join(', ') : result.question.answer}
+                  Correct:{' '}
+                  {result.question.type === 'match-pair' && result.question.matchPairs
+                    ? Object.entries(result.question.matchPairs).map(([k, v]) => `${k} → ${v}`).join(' · ')
+                    : Array.isArray(result.question.answer)
+                      ? result.question.answer.join(', ')
+                      : result.question.answer}
                 </p>
                 <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
                   {result.question.explanation}

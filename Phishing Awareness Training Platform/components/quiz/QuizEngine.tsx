@@ -260,7 +260,12 @@ function MatchPair({
 
   const handleValueClick = (value: string) => {
     if (submitted || !activeKey) return
-    const updated = { ...selected, [activeKey]: value }
+    // Unlink this value from whichever key previously held it, then assign to activeKey
+    const updated: Record<string, string> = {}
+    for (const k of Object.keys(selected)) {
+      if (selected[k] !== value) updated[k] = selected[k]
+    }
+    updated[activeKey] = value
     onSelect(updated)
     setActiveKey(null)
   }
@@ -299,10 +304,10 @@ function MatchPair({
             <button
               key={value}
               onClick={() => handleValueClick(value)}
-              disabled={submitted || (isMatched && activeKey === null)}
+              disabled={submitted || (!activeKey && isMatched)}
               className={cn(
                 'w-full rounded-lg border p-3 text-left text-xs transition-all',
-                isMatched ? 'border-brand/30 bg-brand/5 opacity-70' : 'border-border bg-card hover:border-brand/30',
+                isMatched && !activeKey ? 'border-brand/30 bg-brand/5 opacity-70' : 'border-border bg-card hover:border-brand/30',
                 activeKey ? 'cursor-pointer hover:bg-brand/5 hover:border-brand/40' : '',
               )}
             >
@@ -434,9 +439,15 @@ interface QuizEngineProps {
   onComplete: () => void
 }
 
-function normalizeAnswer(val: unknown): string | string[] {
+function normalizeAnswer(val: unknown, question?: Question): string | string[] {
   if (Array.isArray(val)) return val
-  if (typeof val === 'object' && val !== null) return Object.values(val as Record<string, string>)
+  if (typeof val === 'object' && val !== null) {
+    if (question?.type === 'match-pair' && question.matchPairs) {
+      const pairs = val as Record<string, string>
+      return Object.keys(question.matchPairs).map((k) => `${k} → ${pairs[k] ?? '(not answered)'}`)
+    }
+    return Object.values(val as Record<string, string>)
+  }
   return String(val ?? '')
 }
 
@@ -500,15 +511,23 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
   const hasAnswer = useCallback(() => {
     if (!currentAnswer) return false
     if (Array.isArray(currentAnswer)) return currentAnswer.length > 0
-    if (typeof currentAnswer === 'object') return Object.keys(currentAnswer).length > 0
+    if (typeof currentAnswer === 'object') {
+      if (question?.type === 'match-pair' && question.matchPairs) {
+        const keys = Object.keys(question.matchPairs)
+        const ans = currentAnswer as Record<string, string>
+        return keys.length > 0 && keys.every((k) => ans[k])
+      }
+      return Object.keys(currentAnswer).length > 0
+    }
     return currentAnswer !== ''
-  }, [currentAnswer])
+  }, [currentAnswer, question])
 
   const setAnswer = (id: string, val: unknown) => {
     setState((s) => ({ ...s, answers: { ...s.answers, [id]: val as string | string[] } }))
   }
 
   const handleHint = (penalty: number) => {
+    addXP(-penalty)
     setState((s) => ({
       ...s,
       xpDeducted: { ...s.xpDeducted, [question.id]: (s.xpDeducted[question.id] ?? 0) + penalty },
@@ -525,11 +544,11 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
   const handleNext = () => {
     const correct = checkAnswer(question, currentAnswer)
     const deducted = state.xpDeducted[question.id] ?? 0
-    const xpForQuestion = correct ? Math.max(10 - deducted, 0) : 0
+    const xpForQuestion = correct ? 10 : 0
 
     const resultItem = {
       question,
-      userAnswer: normalizeAnswer(currentAnswer),
+      userAnswer: normalizeAnswer(currentAnswer, question),
       correct,
       hintsUsed: state.hintsUsed[question.id] ?? 0,
       xpDeducted: deducted,
