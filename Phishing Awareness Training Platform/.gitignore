@@ -44,8 +44,9 @@ coverage/
 # Misc
 *.pem
 
-# Markdown docs
+# Markdown docs (keep README)
 *.md
+!README.md
 
 # Claude
 .claude/
