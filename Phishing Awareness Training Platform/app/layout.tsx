@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   description:
     'Interactive cybersecurity awareness training platform. Learn to identify, avoid, and report phishing attacks through gamified modules, simulations, and quizzes.',
   keywords: ['phishing', 'cybersecurity', 'awareness training', 'security'],
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 }
 
 export default function RootLayout({

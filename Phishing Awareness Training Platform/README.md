@@ -2,18 +2,23 @@
 
 <div align="center">
 
-![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)
-![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwindcss&logoColor=white)
-![Framer Motion](https://img.shields.io/badge/Framer_Motion-12-0055FF?logo=framer&logoColor=white)
-![Deployed on Vercel](https://img.shields.io/badge/Deployed_on-Vercel-black?logo=vercel&logoColor=white)
+<img src="public/logo.png" alt="PhishShield Logo" width="100" />
+
+<br/>
+<br/>
 
 **A gamified, browser-based phishing awareness training platform.**
 
 Structured lessons · Interactive simulations · Spaced-repetition flashcards · Gamified quizzes · Completion certificate
 
-[Live Demo](https://phishshield.vercel.app) · [Report an Issue](https://github.com/EddyKilonzo/codeAlpha/issues)
+<br/>
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-phishingawarenesstraining--theta.vercel.app-22c55e?style=for-the-badge&logo=vercel&logoColor=white)](https://phishingawarenesstraining-theta.vercel.app/)
+[![Report Bug](https://img.shields.io/badge/Report_Bug-GitHub_Issues-red?style=for-the-badge&logo=github&logoColor=white)](https://github.com/EddyKilonzo/codeAlpha/issues)
+
+<br/>
+
+<img src="https://skillicons.dev/icons?i=nextjs,react,ts,tailwind,vercel" alt="Tech Stack" />
 
 </div>
 
@@ -37,7 +42,6 @@ PhishShield teaches employees and individuals how to recognize, resist, and repo
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
 - [Deployment](#deployment)
 - [Security](#security)
 
@@ -258,6 +262,14 @@ sequenceDiagram
 
 ## Tech Stack
 
+<div align="center">
+
+<img src="https://skillicons.dev/icons?i=nextjs,react,ts,tailwind,vercel" alt="Core Stack" />
+
+</div>
+
+<br/>
+
 | Package | Version | Role |
 |---------|---------|------|
 | `next` | 15.x | Framework — App Router, static export (`output: 'export'`) |
@@ -338,43 +350,10 @@ Phishing Awareness Training Platform/
 │   └── index.ts                     # All interfaces: UserProgress, Question, Simulation, Achievement…
 │
 ├── public/
-│   └── logo.png                     # PhishShield shield logo
+│   └── logo.png                     # PhishShield shield logo / favicon
 │
 ├── vercel.json                      # Framework preset + security headers (CSP, HSTS, X-Frame…)
-└── next.config.ts                   # output: 'export', dev CSP flag
-```
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/EddyKilonzo/codeAlpha.git
-
-# Navigate into the project
-cd "codeAlpha/Phishing Awareness Training Platform"
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000). Progress is saved automatically in `localStorage`.
-
-### Build
-
-```bash
-npm run build      # Produces a static export in /out
+└── next.config.ts                   # output: 'export'
 ```
 
 ---
