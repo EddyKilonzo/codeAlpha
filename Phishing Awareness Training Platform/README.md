@@ -14,7 +14,7 @@ Structured lessons · Interactive simulations · Spaced-repetition flashcards ·
 <br/>
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-phishingawarenesstraining--theta.vercel.app-22c55e?style=for-the-badge&logo=vercel&logoColor=white)](https://phishingawarenesstraining-theta.vercel.app/)
-[![Report Bug](https://img.shields.io/badge/Report_Bug-GitHub_Issues-red?style=for-the-badge&logo=github&logoColor=white)](https://github.com/EddyKilonzo/codeAlpha/issues)
+
 
 <br/>
 
