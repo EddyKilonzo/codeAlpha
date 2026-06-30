@@ -44,4 +44,9 @@ coverage/
 # Misc
 *.pem
 
+# Markdown docs
+*.md
+
+# Claude
+.claude/
 /claude
