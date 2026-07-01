@@ -182,29 +182,41 @@ export function CertificateModal({ open, onClose }: Props) {
         width: 900,
         height: 640,
         onclone: (clonedDoc, clonedEl) => {
-          // Mark the certificate root so the style below can exclude it.
-          clonedEl.setAttribute('data-cert-root', 'true')
+          // html2canvas builds its CSS cascade from clonedDoc.styleSheets — not from
+          // the live DOM. Any background-image containing a data:image/svg+xml URL
+          // causes html2canvas to draw the SVG into a canvas; if the SVG has no
+          // explicit width/height that canvas is 0×0 and ctx.createPattern throws
+          // InvalidStateError. CSS injection and pre-clone DOM changes are both
+          // ineffective because html2canvas re-parses its own copy of the sheets.
+          //
+          // Fix: mutate the CSSStyleRule objects in clonedDoc.styleSheets directly —
+          // this is the only path that reliably reaches html2canvas's renderer.
+          const patchRules = (rules: CSSRuleList) => {
+            Array.from(rules).forEach(rule => {
+              try {
+                if (rule instanceof CSSStyleRule) {
+                  const bg = rule.style.getPropertyValue('background-image')
+                  if (bg.includes('data:image/svg+xml')) {
+                    rule.style.setProperty('background-image', 'none', 'important')
+                  }
+                }
+                // Recurse into @media, @supports, @layer, etc.
+                if ('cssRules' in rule && (rule as CSSGroupingRule).cssRules) {
+                  patchRules((rule as CSSGroupingRule).cssRules)
+                }
+              } catch { /* ignore restricted/cross-origin rules */ }
+            })
+          }
+          Array.from(clonedDoc.styleSheets).forEach(sheet => {
+            try { patchRules(sheet.cssRules) } catch { /* cross-origin sheet */ }
+          })
 
-          // html2canvas renders SVG data-URL backgrounds by loading the SVG into a
-          // canvas. If the SVG has no explicit width/height, that canvas is 0×0 and
-          // ctx.createPattern throws InvalidStateError.
-          //
-          // The pre-clone getComputedStyle approach is unreliable because html2canvas
-          // builds its own CSS cascade from the cloned document's stylesheets. The
-          // only safe place to fix this is inside onclone, where we work on the exact
-          // document html2canvas will render.
-          //
-          // Strategy: inject a high-specificity stylesheet rule that suppresses
-          // background-image on every element OUTSIDE the certificate. Elements
-          // inside the certificate use canvas elements and radial-gradient inline
-          // styles — neither triggers the SVG canvas-pattern error.
-          const fix = clonedDoc.createElement('style')
-          fix.textContent = `
-            *:not([data-cert-root]):not([data-cert-root] *) {
-              background-image: none !important;
+          // Also clear any inline SVG backgrounds on individual elements.
+          clonedDoc.querySelectorAll<HTMLElement>('[style]').forEach(el => {
+            if (el.style.backgroundImage.includes('data:image/svg+xml')) {
+              el.style.setProperty('background-image', 'none', 'important')
             }
-          `
-          clonedDoc.head.appendChild(fix)
+          })
 
           // html2canvas reclones elements internally so canvas pixels are lost.
           // Redraw hex grid + wave borders from the live source canvases.
