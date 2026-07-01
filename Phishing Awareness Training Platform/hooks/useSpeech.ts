@@ -9,17 +9,24 @@ export interface UseSpeechReturn {
   isSupported: boolean
   isPlaying: boolean
   isPaused: boolean
+  hasAudioStarted: boolean
+  playGeneration: number
   isMuted: boolean
+  volume: number
   rate: SpeechRate
   wordIndex: number
   words: string[]
   estimatedSeconds: number
+  availableVoices: SpeechSynthesisVoice[]
+  selectedVoice: SpeechSynthesisVoice | null
   play: () => void
   pause: () => void
   resume: () => void
   replay: () => void
   skip: () => void
   setRate: (r: SpeechRate) => void
+  setVolume: (v: number) => void
+  setVoice: (voice: SpeechSynthesisVoice) => void
   toggleMute: () => void
 }
 
@@ -38,36 +45,43 @@ const PREFERRED_VOICES = [
 export function useSpeech(text: string, onComplete?: () => void): UseSpeechReturn {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
+  const [hasAudioStarted, setHasAudioStarted] = useState(false)
+  const [playGeneration, setPlayGeneration] = useState(0)
+  const [volume, setVolumeState] = useState(1)
   const [rate, setRateState] = useState<SpeechRate>(1)
   const [wordIndex, setWordIndex] = useState(0)
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [selectedVoice, setSelectedVoiceState] = useState<SpeechSynthesisVoice | null>(null)
 
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
-  const isMutedRef = useRef(false)
+  const volumeRef = useRef(1)
+  const savedVolumeRef = useRef(1) // restored when unmuting
   const rateRef = useRef<SpeechRate>(1)
   const onCompleteRef = useRef(onComplete)
   onCompleteRef.current = onComplete
 
-  // Track character position for pause/resume (Chrome's native pause is broken)
+  // Identity-based guard: onend only calls completion for the CURRENT active utterance.
+  // Replaces the old boolean isCancelledRef which could be reset by the first spurious
+  // onend from cancel(), allowing a second Windows-TTS delayed onend to slip through
+  // and reset pausedAtCharRef to 0 — causing resume to restart from the beginning.
+  const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+
+  // Character/time position tracking for pause-resume (Windows TTS doesn't fire onboundary)
   const charIndexRef = useRef(0)
   const pausedAtCharRef = useRef(0)
-  // Guard: cancel() (used for pause/rate-change/replay) triggers onend — suppress it
-  const isCancelledRef = useRef(false)
-  // Time-based char estimation when onboundary doesn't fire (Windows TTS)
   const segmentFromCharRef = useRef(0)
   const segmentStartMsRef = useRef<number | null>(null)
 
   const words = text.split(/\s+/).filter(Boolean)
   const estimatedSeconds = Math.round((words.length / 150) * 60)
+  const isMuted = volume === 0
 
   const isSupported = typeof window !== 'undefined' && 'speechSynthesis' in window
 
-  // Pick the most natural-sounding English voice available
   useEffect(() => {
     if (!isSupported) return
-    const pickVoice = () => {
-      const voices = window.speechSynthesis.getVoices()
+    const pickVoice = (voices: SpeechSynthesisVoice[]) => {
       if (!voices.length) return null
       for (const name of PREFERRED_VOICES) {
         const match = voices.find(v => v.name.includes(name))
@@ -75,24 +89,37 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
       }
       return voices.find(v => v.lang.startsWith('en-')) ?? voices[0] ?? null
     }
-    voiceRef.current = pickVoice()
-    window.speechSynthesis.onvoiceschanged = () => {
-      voiceRef.current = pickVoice()
+    const applyVoices = () => {
+      const voices = window.speechSynthesis.getVoices()
+      if (!voices.length) return
+      const englishVoices = voices.filter(v => v.lang.startsWith('en'))
+      setAvailableVoices(englishVoices)
+      if (!voiceRef.current) {
+        const best = pickVoice(voices)
+        voiceRef.current = best
+        setSelectedVoiceState(best)
+      }
     }
+    applyVoices()
+    window.speechSynthesis.onvoiceschanged = applyVoices
     return () => { window.speechSynthesis.onvoiceschanged = null }
   }, [isSupported])
 
-  // Build an utterance starting from a given character offset in the full text.
-  // onboundary offsets are relative to the slice, so we add fromChar back.
   const buildUtteranceFrom = useCallback((fromChar: number) => {
     const slice = text.slice(fromChar)
     const u = new SpeechSynthesisUtterance(slice)
     u.rate = rateRef.current
-    u.volume = isMutedRef.current ? 0 : 1
+    u.volume = volumeRef.current
     u.pitch = 1.05
     u.lang = 'en-US'
     if (voiceRef.current) u.voice = voiceRef.current
 
+    u.onstart = () => {
+      if (activeUtteranceRef.current !== u) return
+      // Record actual audio-start time (may be 500ms–2s after speak() on Windows TTS)
+      segmentStartMsRef.current = Date.now()
+      setHasAudioStarted(true)
+    }
     u.onboundary = (e) => {
       if (e.name === 'word') {
         const absolute = fromChar + e.charIndex
@@ -102,11 +129,8 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
       }
     }
     u.onend = () => {
-      // If cancel() was called explicitly (pause/rate-change/replay), ignore this event
-      if (isCancelledRef.current) {
-        isCancelledRef.current = false
-        return
-      }
+      if (activeUtteranceRef.current !== u) return
+      activeUtteranceRef.current = null
       setIsPlaying(false)
       setIsPaused(false)
       setWordIndex(words.length)
@@ -115,6 +139,8 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
       onCompleteRef.current?.()
     }
     u.onerror = () => {
+      if (activeUtteranceRef.current !== u) return
+      activeUtteranceRef.current = null
       setIsPlaying(false)
       setIsPaused(false)
     }
@@ -123,16 +149,43 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
 
   useEffect(() => {
     return () => {
+      activeUtteranceRef.current = null
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel()
       }
     }
   }, [])
 
-  // Estimate char position from elapsed time when onboundary hasn't fired
+  // Chrome/Windows heartbeat: Chrome silently cancels long utterances after ~15 s.
+  // Detect and restart from the estimated char position to keep playback alive.
+  useEffect(() => {
+    if (!isSupported || !isPlaying) return
+    const id = setInterval(() => {
+      if (
+        !window.speechSynthesis.speaking &&
+        !window.speechSynthesis.pending &&
+        activeUtteranceRef.current !== null
+      ) {
+        const elapsed = segmentStartMsRef.current != null ? Date.now() - segmentStartMsRef.current : 0
+        const segText = text.slice(segmentFromCharRef.current)
+        const segWords = segText.split(/\s+/).filter(Boolean).length
+        const totalMs = Math.max(1, (segWords / 150) * 60000 / rateRef.current)
+        const fraction = Math.min(0.98, elapsed / totalMs)
+        const fromChar = segmentFromCharRef.current + Math.round(fraction * segText.length)
+        const u = buildUtteranceFrom(fromChar)
+        utteranceRef.current = u
+        activeUtteranceRef.current = u
+        segmentFromCharRef.current = fromChar
+        window.speechSynthesis.speak(u)
+        segmentStartMsRef.current = Date.now()
+      }
+    }, 12000)
+    return () => clearInterval(id)
+  }, [isSupported, isPlaying, text, buildUtteranceFrom])
+
   const estimateCharPosition = useCallback(() => {
     if (charIndexRef.current > segmentFromCharRef.current) {
-      return charIndexRef.current // onboundary gave us a real position
+      return charIndexRef.current
     }
     const elapsedMs = segmentStartMsRef.current != null ? Date.now() - segmentStartMsRef.current : 0
     const segText = text.slice(segmentFromCharRef.current)
@@ -142,27 +195,43 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
     return segmentFromCharRef.current + Math.round(fraction * segText.length)
   }, [text])
 
+  // Restart utterance from current position with new volume/rate applied.
+  const restartFromPosition = useCallback(() => {
+    const fromChar = estimateCharPosition()
+    activeUtteranceRef.current = null
+    window.speechSynthesis.cancel()
+    segmentFromCharRef.current = fromChar
+    segmentStartMsRef.current = null  // onstart sets the real clock
+    setHasAudioStarted(false)
+    const u = buildUtteranceFrom(fromChar)
+    utteranceRef.current = u
+    activeUtteranceRef.current = u
+    window.speechSynthesis.speak(u)
+  }, [estimateCharPosition, buildUtteranceFrom])
+
   const play = useCallback(() => {
     if (!isSupported) return
-    isCancelledRef.current = true
+    activeUtteranceRef.current = null
     window.speechSynthesis.cancel()
     charIndexRef.current = 0
     pausedAtCharRef.current = 0
     segmentFromCharRef.current = 0
+    segmentStartMsRef.current = null  // onstart sets the real clock
     setWordIndex(0)
+    setHasAudioStarted(false)
+    setPlayGeneration(g => g + 1)  // signals fresh play (not resume) to the component
     const u = buildUtteranceFrom(0)
     utteranceRef.current = u
+    activeUtteranceRef.current = u
     window.speechSynthesis.speak(u)
-    segmentStartMsRef.current = Date.now()
     setIsPlaying(true)
     setIsPaused(false)
   }, [isSupported, buildUtteranceFrom])
 
   const pause = useCallback(() => {
     if (!isSupported || !isPlaying) return
-    // Save current char position; fall back to time-based estimate when onboundary didn't fire
     pausedAtCharRef.current = estimateCharPosition()
-    isCancelledRef.current = true
+    activeUtteranceRef.current = null
     window.speechSynthesis.cancel()
     segmentStartMsRef.current = null
     setIsPlaying(false)
@@ -172,10 +241,12 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
   const resume = useCallback(() => {
     if (!isSupported || !isPaused) return
     segmentFromCharRef.current = pausedAtCharRef.current
+    segmentStartMsRef.current = null  // onstart sets the real clock
+    setHasAudioStarted(false)
     const u = buildUtteranceFrom(pausedAtCharRef.current)
     utteranceRef.current = u
+    activeUtteranceRef.current = u
     window.speechSynthesis.speak(u)
-    segmentStartMsRef.current = Date.now()
     setIsPlaying(true)
     setIsPaused(false)
   }, [isSupported, isPaused, buildUtteranceFrom])
@@ -188,6 +259,7 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
 
   const skip = useCallback(() => {
     if (!isSupported) return
+    activeUtteranceRef.current = null
     window.speechSynthesis.cancel()
     setIsPlaying(false)
     setIsPaused(false)
@@ -200,46 +272,53 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
   const setRate = useCallback((r: SpeechRate) => {
     rateRef.current = r
     setRateState(r)
-    if (isPlaying) {
-      // Restart from estimated position with new rate
-      const fromChar = estimateCharPosition()
-      isCancelledRef.current = true
-      window.speechSynthesis.cancel()
-      segmentFromCharRef.current = fromChar
-      const u = buildUtteranceFrom(fromChar)
-      utteranceRef.current = u
-      window.speechSynthesis.speak(u)
-      segmentStartMsRef.current = Date.now()
-      setIsPlaying(true)
-      setIsPaused(false)
-    }
-    // If paused, pausedAtCharRef is already saved — resume will use new rate
-  }, [isPlaying, buildUtteranceFrom, estimateCharPosition])
+    if (isPlaying) restartFromPosition()
+  }, [isPlaying, restartFromPosition])
+
+  const setVolume = useCallback((v: number) => {
+    const clamped = Math.max(0, Math.min(1, v))
+    volumeRef.current = clamped
+    setVolumeState(clamped)
+    if (clamped > 0) savedVolumeRef.current = clamped
+    if (isPlaying) restartFromPosition()
+  }, [isPlaying, restartFromPosition])
 
   const toggleMute = useCallback(() => {
-    const next = !isMutedRef.current
-    isMutedRef.current = next
-    setIsMuted(next)
-    if (utteranceRef.current) {
-      utteranceRef.current.volume = next ? 0 : 1
+    if (volumeRef.current === 0) {
+      setVolume(savedVolumeRef.current > 0 ? savedVolumeRef.current : 1)
+    } else {
+      setVolume(0)
     }
-  }, [])
+  }, [setVolume])
+
+  const setVoice = useCallback((voice: SpeechSynthesisVoice) => {
+    voiceRef.current = voice
+    setSelectedVoiceState(voice)
+    if (isPlaying) restartFromPosition()
+  }, [isPlaying, restartFromPosition])
 
   return {
     isSupported,
     isPlaying,
     isPaused,
+    hasAudioStarted,
+    playGeneration,
     isMuted,
+    volume,
     rate,
     wordIndex,
     words,
     estimatedSeconds,
+    availableVoices,
+    selectedVoice,
     play,
     pause,
     resume,
     replay,
     skip,
     setRate,
+    setVolume,
+    setVoice,
     toggleMute,
   }
 }

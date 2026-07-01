@@ -273,12 +273,13 @@ export function ModulePageClient({ module }: Props) {
         </div>
       </div>
 
-      {/* Tab bar — sticky below header, with reading progress bar */}
-      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6">
+      {/* Tab section card — border radius on the whole lesson/quiz area */}
+      <div className="rounded-2xl border border-border bg-card shadow-sm">
+      <div className="sticky top-0 z-20">
         {activeTab === 'lesson' && <LessonReadingProgress />}
         <div
-          className="flex gap-0 border-b border-border/50 px-4 sm:px-6"
-          style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(16px)', boxShadow: 'rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset' }}
+          className="flex gap-0 border-b border-border/50 px-4 sm:px-6 rounded-t-2xl"
+          style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
         >
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -330,8 +331,7 @@ export function ModulePageClient({ module }: Props) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.18 }}
-          className="pt-2 sm:pt-4"
-          style={{ boxShadow: 'rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset' }}
+          className="px-5 sm:px-6 pt-5 pb-6"
         >
           {/* LESSON TAB */}
           {activeTab === 'lesson' && (
@@ -412,7 +412,6 @@ export function ModulePageClient({ module }: Props) {
                     <div
                       key={sim.id}
                       className="rounded-2xl border border-border/60 bg-card p-4 sm:p-6"
-                      style={{ boxShadow: 'rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset' }}
                     >
                       {simulations.length > 1 && (
                         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">
@@ -493,6 +492,7 @@ export function ModulePageClient({ module }: Props) {
           )}
         </motion.div>
       </AnimatePresence>
+      </div>{/* end tab section card */}
     </div>
   )
 }

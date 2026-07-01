@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Play, Pause, RotateCcw, SkipForward, Volume2, VolumeX,
-  ChevronDown, Clock, Mic,
+  Play, Pause, RotateCcw, SkipForward, Volume2, Volume1, VolumeX,
+  ChevronDown, Clock, Mic, Mic2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSpeech, SPEECH_RATES, type SpeechRate } from '@/hooks/useSpeech'
@@ -22,6 +22,42 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return m > 0 ? `${m}m ${s}s` : `${s}s`
+}
+
+const VOICE_NICKNAMES: Record<string, string> = {
+  'Google UK English Female': 'Ava · UK',
+  'Google UK English Male': 'Oliver · UK',
+  'Google US English': 'Ava · US',
+  'Jenny': 'Jenny',
+  'Aria': 'Aria',
+  'Zira': 'Zira',
+  'David': 'David',
+  'Mark': 'Mark',
+  'Guy': 'Guy',
+  'Samantha': 'Samantha',
+  'Karen': 'Karen · AU',
+  'Daniel': 'Daniel · UK',
+  'Alex': 'Alex',
+  'Moira': 'Moira · IE',
+  'Tessa': 'Tessa · ZA',
+  'Fiona': 'Fiona · SC',
+  'Victoria': 'Victoria',
+  'Tom': 'Tom',
+  'Siri': 'Siri',
+}
+
+function getVoiceNickname(voice: SpeechSynthesisVoice): string {
+  // Check exact known names first
+  for (const [key, nick] of Object.entries(VOICE_NICKNAMES)) {
+    if (voice.name.includes(key)) return nick
+  }
+  // Strip Microsoft/Google prefixes and suffixes like "Online (Natural) - English (US)"
+  return voice.name
+    .replace(/^(Microsoft|Google)\s+/i, '')
+    .replace(/\s+Online\s*\([^)]+\)/i, '')
+    .replace(/\s*-\s*English\s*\([^)]+\)/i, '')
+    .trim()
+    .split(/\s+/)[0]  // take first word of whatever's left
 }
 
 // Animated waveform bars
@@ -70,6 +106,14 @@ export function VoiceSummaryPlayer({ moduleId, phase, onComplete }: Props) {
 
   const speech = useSpeech(text, handleComplete)
 
+  // Local slider state — updates visually on drag, commits to speech only on release
+  const [sliderVolume, setSliderVolume] = useState(speech.volume)
+  useEffect(() => { setSliderVolume(speech.volume) }, [speech.volume])
+
+  // Tokenise text into [word, whitespace, word, …] for word-level highlighting
+  const tokens = text.split(/(\s+)/)
+  const transcriptRef = useRef<HTMLDivElement>(null)
+
   // ── Time-based progress (fallback when onboundary doesn't fire on Windows TTS) ──
   const totalMsRef = useRef(1)
   totalMsRef.current = Math.max(1, (speech.estimatedSeconds / speech.rate) * 1000)
@@ -78,19 +122,38 @@ export function VoiceSummaryPlayer({ moduleId, phase, onComplete }: Props) {
   const wasPausedRef = useRef(false)
   const [timePct, setTimePct] = useState(0)
 
+  // Reset timer state on every fresh play() call (not resume).
+  // Without this, replaying from a paused state keeps accMsRef from the previous
+  // session, causing the highlight to resume from the pause point instead of 0.
   useEffect(() => {
-    if (speech.isPlaying) {
-      if (!wasPausedRef.current) {
-        accMsRef.current = 0
-        setTimePct(0)
-      }
+    accMsRef.current = 0
+    wasPausedRef.current = false
+    playStartRef.current = null
+    setTimePct(0)
+  }, [speech.playGeneration])
+
+  useEffect(() => {
+    if (speech.isPlaying && speech.hasAudioStarted) {
+      // Audio is actually playing — start the interval.
+      // playGeneration effect resets accMsRef on fresh play; wasPausedRef/isPaused
+      // branches saved it on pause/voice-change — so we always continue correctly.
       wasPausedRef.current = false
       playStartRef.current = Date.now()
       const id = setInterval(() => {
         const elapsed = accMsRef.current + (Date.now() - (playStartRef.current ?? Date.now()))
-        setTimePct(Math.min(99, Math.round((elapsed / totalMsRef.current) * 100)))
-      }, 200)
+        // Float (not Math.round) so word advances 1 at a time — no 2-word skips
+        setTimePct(Math.min(99, (elapsed / totalMsRef.current) * 100))
+      }, 50)
       return () => clearInterval(id)
+    } else if (speech.isPlaying && !speech.hasAudioStarted) {
+      // Restarting mid-play (voice/rate/volume change) or startup latency before
+      // onstart fires. Save elapsed time so the highlight continues from the same
+      // position when the new utterance starts, instead of resetting to 0.
+      wasPausedRef.current = true
+      if (playStartRef.current != null) {
+        accMsRef.current += Date.now() - playStartRef.current
+        playStartRef.current = null
+      }
     } else if (speech.isPaused) {
       wasPausedRef.current = true
       if (playStartRef.current != null) {
@@ -98,17 +161,31 @@ export function VoiceSummaryPlayer({ moduleId, phase, onComplete }: Props) {
         playStartRef.current = null
       }
     } else {
+      // Stopped (ended or skipped) — full reset
       wasPausedRef.current = false
       accMsRef.current = 0
       playStartRef.current = null
       setTimePct(0)
     }
-  }, [speech.isPlaying, speech.isPaused])
+  }, [speech.isPlaying, speech.isPaused, speech.hasAudioStarted])
 
   const wordBasedPct = speech.words.length > 0
     ? Math.round((speech.wordIndex / speech.words.length) * 100)
     : 0
   const progressPct = Math.max(wordBasedPct, timePct)
+
+  // Effective word index for transcript highlight — prefer accurate onboundary index,
+  // fall back to time-based approximation for Windows TTS where onboundary never fires
+  const effectiveWordIndex = speech.wordIndex > 0
+    ? speech.wordIndex
+    : Math.floor((progressPct / 100) * speech.words.length)
+
+  // Auto-scroll the highlighted word into view whenever it advances
+  useEffect(() => {
+    if (!showTranscript || !transcriptRef.current) return
+    const el = transcriptRef.current.querySelector<HTMLElement>('[data-current="true"]')
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [effectiveWordIndex, showTranscript])
 
   const remaining = Math.round(
     (speech.estimatedSeconds * (1 - progressPct / 100)) / speech.rate
@@ -160,30 +237,45 @@ export function VoiceSummaryPlayer({ moduleId, phase, onComplete }: Props) {
             <motion.div
               className="absolute inset-y-0 left-0 rounded-full bg-brand"
               animate={{ width: `${progressPct}%` }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
+              transition={{ duration: 0.08, ease: 'linear' }}
             />
           </div>
           <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span>{progressPct}%</span>
+            <span>{Math.round(progressPct)}%</span>
             <span>{speech.wordIndex} / {speech.words.length} words</span>
           </div>
         </div>
 
         {/* Controls */}
         <div className="flex items-center justify-between">
-          {/* Left: mute */}
-          <motion.button
-            type="button"
-            onClick={speech.toggleMute}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
-            aria-label={speech.isMuted ? 'Unmute' : 'Mute'}
-          >
-            {speech.isMuted
-              ? <VolumeX className="h-4 w-4" />
-              : <Volume2 className="h-4 w-4" />}
-          </motion.button>
+          {/* Left: volume icon + slider */}
+          <div className="flex items-center gap-1.5">
+            <motion.button
+              type="button"
+              onClick={speech.toggleMute}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
+              aria-label={speech.isMuted ? 'Unmute' : 'Mute'}
+            >
+              {speech.volume === 0
+                ? <VolumeX className="h-4 w-4" />
+                : speech.volume < 0.5
+                  ? <Volume1 className="h-4 w-4" />
+                  : <Volume2 className="h-4 w-4" />}
+            </motion.button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={sliderVolume}
+              onChange={(e) => setSliderVolume(parseFloat(e.target.value))}
+              onPointerUp={(e) => speech.setVolume(parseFloat((e.target as HTMLInputElement).value))}
+              className="w-16 h-1 cursor-pointer accent-brand"
+              aria-label="Volume"
+            />
+          </div>
 
           {/* Center: replay + play/pause + skip */}
           <div className="flex items-center gap-2">
@@ -253,6 +345,36 @@ export function VoiceSummaryPlayer({ moduleId, phase, onComplete }: Props) {
           </div>
         </div>
 
+        {/* Voice picker */}
+        {speech.availableVoices.length > 1 && (
+          <div className="flex items-center gap-2">
+            <Mic2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <div className="relative inline-flex items-center">
+              <select
+                value={speech.selectedVoice?.name ?? ''}
+                onChange={(e) => {
+                  const v = speech.availableVoices.find(v => v.name === e.target.value)
+                  if (v) speech.setVoice(v)
+                }}
+                className={cn(
+                  'appearance-none cursor-pointer rounded-full border border-border/70',
+                  'bg-muted/50 px-3 py-1 pr-6 text-[10px] font-medium text-foreground',
+                  'hover:border-brand/50 hover:bg-muted transition-colors outline-none',
+                  'focus:border-brand focus:ring-1 focus:ring-brand/30'
+                )}
+                aria-label="Select voice"
+              >
+                {speech.availableVoices.map(v => (
+                  <option key={v.name} value={v.name}>
+                    {getVoiceNickname(v)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-1.5 h-3 w-3 text-muted-foreground" />
+            </div>
+          </div>
+        )}
+
         {/* Unsupported fallback */}
         {!speech.isSupported && (
           <p className="text-center text-xs text-muted-foreground py-2">
@@ -282,8 +404,36 @@ export function VoiceSummaryPlayer({ moduleId, phase, onComplete }: Props) {
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 pt-3 max-h-64 overflow-y-auto">
-              <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-line">{text}</p>
+            <div ref={transcriptRef} className="px-5 pb-5 pt-3 max-h-64 overflow-y-auto">
+              <p className="text-xs leading-relaxed whitespace-pre-wrap">
+                {(() => {
+                  let wordCount = 0
+                  return tokens.map((token, i) => {
+                    if (/^\s+$/.test(token)) {
+                      return <span key={i}>{token}</span>
+                    }
+                    const idx = wordCount++
+                    const isCurrent = (speech.isPlaying || speech.isPaused) && idx === effectiveWordIndex
+                    const isPast = (speech.isPlaying || speech.isPaused) && idx < effectiveWordIndex
+                    return (
+                      <span
+                        key={i}
+                        data-current={isCurrent ? 'true' : undefined}
+                        className={cn(
+                          'transition-colors duration-150',
+                          isCurrent
+                            ? 'text-brand font-semibold'
+                            : isPast
+                              ? 'text-foreground/35'
+                              : 'text-foreground/80'
+                        )}
+                      >
+                        {token}
+                      </span>
+                    )
+                  })
+                })()}
+              </p>
             </div>
           </motion.div>
         )}

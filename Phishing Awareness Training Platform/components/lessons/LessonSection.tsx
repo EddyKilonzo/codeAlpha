@@ -38,31 +38,39 @@ export function LessonSection({ section, index }: Props) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-60px' }}
       transition={{ delay: index * 0.05, duration: 0.4 }}
-      className="space-y-4"
+      className="rounded-2xl border border-border bg-card shadow-sm"
     >
-      {/* Section header — sticky, theme-aware glass */}
+      {/* ── Section header ─────────────────────────────────────────────────── */}
       <div
-        className="sticky top-[49px] z-10 flex items-start gap-4 py-2 -my-2 pr-2"
-        style={{
-          background: 'var(--glass-bg)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-        }}
+        className="border-b border-border/50 rounded-t-2xl bg-muted/30 dark:bg-muted/10"
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 border border-brand/20">
-          <Icon className="h-5 w-5 text-brand" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <h3 className="text-base font-bold text-foreground">{section.title}</h3>
-            <SectionVoicePlayer section={section} />
+        <div className="flex items-start gap-3 px-6 py-5">
+          {/* Icon badge */}
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/10 border border-brand/20 mt-0.5">
+            <Icon className="h-4 w-4 text-brand" />
           </div>
-          <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{section.description}</p>
+
+          {/* Title row + description */}
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center gap-3">
+              <h3 className="flex-1 text-[15px] font-bold text-foreground leading-snug">
+                {section.title}
+              </h3>
+              {/* Listen button pinned right — never competes with title */}
+              <div className="shrink-0">
+                <SectionVoicePlayer section={section} />
+              </div>
+            </div>
+            <p className="text-[13px] text-muted-foreground leading-relaxed">
+              {section.description}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Cards */}
-      <div className="space-y-3 pl-0 sm:pl-14">
+      {/* ── Child concept cards ─────────────────────────────────────────────── */}
+      {/* px-6 matches the header px-6 so all left edges align perfectly */}
+      <div className="px-6 pt-5 pb-6 space-y-3">
         {section.cards.map((card) => {
           switch (card.type) {
             case 'reveal':
