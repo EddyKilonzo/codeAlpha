@@ -114,7 +114,7 @@ export function DashboardClient() {
   if (!isHydrated) return <DashboardSkeleton />
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-6 sm:space-y-8">
+    <div className="max-w-5xl mx-auto px-4 py-4 sm:px-6 sm:py-6 space-y-6 sm:space-y-8">
       {/* Welcome header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
@@ -215,16 +215,147 @@ export function DashboardClient() {
         </div>
       )}
 
-      {/* Module grid */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Modules</h2>
-        <div className="space-y-3">
+      {/* Module grid — 3 per row */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Modules</h2>
+          <span className="text-xs text-muted-foreground">{completedCount} of {totalModules} complete</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {MODULES.map((mod, i) => {
             const Icon = MODULE_ICONS[mod.icon] ?? ShieldAlert
             const isUnlocked = isModuleUnlocked(mod.id)
             const isCompleted = isModuleCompleted(mod.id)
             const quizScore = getQuizScore(mod.id)
             const isNext = !isCompleted && isUnlocked
+            const moduleNum = String(mod.order).padStart(2, '0')
+
+            const card = (
+              <div className={cn(
+                'group relative flex h-full flex-col rounded-2xl border overflow-hidden shadow-premium-sm transition-colors',
+                isUnlocked && 'card-lift cursor-pointer',
+                isNext && 'border-brand/40',
+                isCompleted && 'border-brand/20',
+                isUnlocked && !isNext && !isCompleted && 'border-border',
+                !isUnlocked && 'border-border/60 opacity-60',
+              )}>
+                {/* Pulsing unlock glow — only on the "Up Next" card */}
+                {isNext && (
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl pointer-events-none z-10"
+                    animate={{ boxShadow: ['0 0 0 0 rgba(22,163,74,0)', '0 0 0 3px rgba(22,163,74,0.12)', '0 0 0 0 rgba(22,163,74,0)'] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                )}
+
+                {/* Header — tinted, with icon badge + status + faded module number */}
+                <div className={cn(
+                  'relative px-5 pt-5 pb-4',
+                  isCompleted || isNext
+                    ? 'bg-gradient-to-br from-brand/[0.08] via-brand/[0.03] to-transparent'
+                    : 'bg-muted/20',
+                )}>
+                  {/* Large faded module-number watermark */}
+                  <span className="pointer-events-none absolute top-2 right-4 select-none font-mono text-5xl font-black text-foreground/[0.06]">
+                    {moduleNum}
+                  </span>
+
+                  <div className="relative flex items-start justify-between">
+                    {/* Icon badge */}
+                    <div className={cn(
+                      'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border overflow-hidden',
+                      isCompleted ? 'bg-brand/10 border-brand/20'
+                        : isNext ? 'bg-brand/[0.08] border-brand/15'
+                          : isUnlocked ? 'bg-muted border-border'
+                            : 'bg-muted border-border',
+                    )}>
+                      {justUnlockedId === mod.id && (
+                        <motion.div
+                          className="absolute inset-0 bg-brand/20 rounded-xl"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: [0, 0.8, 0] }}
+                          transition={{ duration: 0.9, ease: 'easeOut' }}
+                        />
+                      )}
+                      {!isUnlocked ? (
+                        <Lock className="h-5 w-5 text-muted-foreground" />
+                      ) : isCompleted ? (
+                        <CheckCircle2 className="h-6 w-6 text-brand" />
+                      ) : justUnlockedId === mod.id ? (
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key="lock-open"
+                            initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
+                            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                            exit={{ scale: 1.2, opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                          >
+                            <LockOpen className="h-6 w-6 text-brand" />
+                          </motion.span>
+                        </AnimatePresence>
+                      ) : (
+                        <Icon className={cn('h-6 w-6', isNext ? 'text-brand' : 'text-muted-foreground')} />
+                      )}
+                    </div>
+
+                    {/* Status badge */}
+                    {isCompleted ? (
+                      <Badge className="bg-brand/10 text-brand border-brand/30 gap-1 text-[10px]">
+                        <CheckCircle2 className="h-2.5 w-2.5" /> Complete
+                      </Badge>
+                    ) : isNext ? (
+                      <Badge className="bg-brand/[0.08] text-brand border-brand/25 text-[10px]">Up Next</Badge>
+                    ) : !isUnlocked ? (
+                      <Badge variant="outline" className="text-[10px]">Locked</Badge>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="flex flex-1 flex-col gap-2 px-5 pb-5 bg-card">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand/70">
+                    Module {mod.order}
+                  </span>
+                  <h3 className={cn(
+                    'text-sm font-bold leading-snug',
+                    isUnlocked ? 'text-foreground' : 'text-muted-foreground',
+                  )}>
+                    {mod.title}
+                  </h3>
+                  <p className={cn(
+                    'flex-1 text-xs leading-relaxed line-clamp-3',
+                    isUnlocked ? 'text-muted-foreground' : 'text-muted-foreground/60',
+                  )}>
+                    {mod.description}
+                  </p>
+
+                  {/* Footer meta */}
+                  <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-3">
+                    <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {mod.estimatedMinutes}m
+                      </span>
+                      <span className="flex items-center gap-1 text-brand font-semibold">
+                        <Star className="h-3 w-3" /> {mod.xpReward}
+                      </span>
+                      {quizScore && (
+                        <span className="flex items-center gap-1 text-brand font-medium">
+                          <GraduationCap className="h-3 w-3" /> {quizScore.score}%
+                        </span>
+                      )}
+                    </div>
+                    {isUnlocked ? (
+                      <span className="flex items-center gap-0.5 text-[11px] font-bold text-brand">
+                        {isCompleted ? 'Review' : isNext ? 'Start' : 'Open'}
+                        <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                      </span>
+                    ) : (
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
 
             return (
               <motion.div
@@ -232,130 +363,11 @@ export function DashboardClient() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06, duration: 0.35, ease: 'easeOut' }}
+                className="h-full"
               >
-                {isUnlocked ? (
-                  <Link href={`/modules/${mod.id}`}>
-                    <div className={cn(
-                      'group relative rounded-2xl border card-lift overflow-hidden cursor-pointer shadow-premium-sm',
-                      isNext && 'border-brand/40',
-                      isCompleted && 'border-brand/20',
-                      !isNext && !isCompleted && 'border-border',
-                    )}>
-                      {/* Pulsing unlock glow — only on the "Up Next" card */}
-                      {isNext && (
-                        <motion.div
-                          className="absolute inset-0 rounded-xl pointer-events-none"
-                          animate={{ boxShadow: ['0 0 0 0 rgba(22,163,74,0)', '0 0 0 3px rgba(22,163,74,0.14)', '0 0 0 0 rgba(22,163,74,0)'] }}
-                          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                        />
-                      )}
-
-                      {/* Brand accent top strip */}
-                      <div className={cn(
-                        'h-0.5 w-full',
-                        isCompleted || isNext ? 'bg-brand' : 'bg-muted'
-                      )} />
-
-                      <div className="flex items-center gap-4 p-5 bg-card">
-                        {/* Module icon — monochromatic */}
-                        <div className={cn(
-                          'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border overflow-hidden',
-                          isCompleted
-                            ? 'bg-brand/10 border-brand/20'
-                            : isNext
-                              ? 'bg-brand/[0.08] border-brand/15'
-                              : 'bg-muted border-border'
-                        )}>
-                          {/* Unlock flash overlay */}
-                          {justUnlockedId === mod.id && (
-                            <motion.div
-                              className="absolute inset-0 bg-brand/20 rounded-xl"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: [0, 0.8, 0] }}
-                              transition={{ duration: 0.9, ease: 'easeOut' }}
-                            />
-                          )}
-                          {isCompleted ? (
-                            <CheckCircle2 className="h-6 w-6 text-brand" />
-                          ) : justUnlockedId === mod.id ? (
-                            <AnimatePresence mode="wait">
-                              <motion.span
-                                key="lock-open"
-                                initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
-                                animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                                exit={{ scale: 1.2, opacity: 0 }}
-                                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                              >
-                                <LockOpen className="h-6 w-6 text-brand" />
-                              </motion.span>
-                            </AnimatePresence>
-                          ) : (
-                            <Icon className={cn(
-                              'h-6 w-6',
-                              isNext ? 'text-brand' : 'text-muted-foreground'
-                            )} />
-                          )}
-                        </div>
-
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-bold text-foreground">{mod.title}</span>
-                            {isCompleted && (
-                              <Badge className="bg-brand/10 text-brand border-brand/30 gap-1 text-[10px]">
-                                <CheckCircle2 className="h-2.5 w-2.5" /> Complete
-                              </Badge>
-                            )}
-                            {isNext && !isCompleted && (
-                              <Badge className="bg-brand/[0.08] text-brand border-brand/25 text-[10px]">
-                                Up Next
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground line-clamp-1">{mod.description}</p>
-                          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" /> {mod.estimatedMinutes} min
-                            </span>
-                            <span className="flex items-center gap-1 text-brand font-semibold">
-                              <Star className="h-3 w-3" /> +{mod.xpReward} XP
-                            </span>
-                            {quizScore && (
-                              <span className="flex items-center gap-1 text-brand font-medium">
-                                <GraduationCap className="h-3 w-3" /> {quizScore.score}%
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <ChevronRight className={cn(
-                          'h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200',
-                          'group-hover:translate-x-0.5 group-hover:text-brand'
-                        )} />
-                      </div>
-                    </div>
-                  </Link>
-                ) : (
-                  <div className="rounded-2xl border border-border/60 overflow-hidden opacity-50">
-                    <div className="h-0.5 w-full bg-muted" />
-                    <div className="flex items-center gap-4 p-5 bg-card">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted border border-border">
-                        <Lock className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-muted-foreground">{mod.title}</span>
-                          <Badge variant="outline" className="text-[10px]">Locked</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground/60 line-clamp-1">{mod.description}</p>
-                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground/60">
-                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {mod.estimatedMinutes} min</span>
-                          <span className="flex items-center gap-1"><Star className="h-3 w-3" /> +{mod.xpReward} XP</span>
-                        </div>
-                      </div>
-                      <Lock className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-                    </div>
-                  </div>
-                )}
+                {isUnlocked
+                  ? <Link href={`/modules/${mod.id}`} className="block h-full">{card}</Link>
+                  : card}
               </motion.div>
             )
           })}

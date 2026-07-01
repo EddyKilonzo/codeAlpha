@@ -169,6 +169,27 @@ export function CertificateModal({ open, onClose }: Props) {
 
     document.body.appendChild(wrapper)
 
+    // html2canvas renders CSS gradients and SVG-data-URL backgrounds by painting
+    // them into an offscreen canvas, then calls ctx.createPattern(canvas). When the
+    // source element computes to 0 width or height, that canvas is 0×0 and
+    // createPattern throws InvalidStateError — aborting the whole capture.
+    //
+    // Suppressing backgrounds via CSS/DOM is unreliable (html2canvas re-parses its
+    // own copy of the cascade). The bulletproof fix is to wrap createPattern so it
+    // returns null (valid per spec — fillStyle just stays unchanged) instead of
+    // throwing on a zero-size canvas. Restored in finally.
+    const ctxProto = CanvasRenderingContext2D.prototype
+    const origCreatePattern = ctxProto.createPattern
+    ctxProto.createPattern = function (image: CanvasImageSource, repetition: string | null) {
+      if (
+        (image instanceof HTMLCanvasElement && (image.width === 0 || image.height === 0)) ||
+        (typeof OffscreenCanvas !== 'undefined' && image instanceof OffscreenCanvas && (image.width === 0 || image.height === 0))
+      ) {
+        return null
+      }
+      return origCreatePattern.call(this, image, repetition)
+    }
+
     try {
       const [html2canvas, { jsPDF }] = await Promise.all([
         import('html2canvas').then((m) => m.default),
@@ -181,43 +202,7 @@ export function CertificateModal({ open, onClose }: Props) {
         logging: false,
         width: 900,
         height: 640,
-        onclone: (clonedDoc, clonedEl) => {
-          // html2canvas builds its CSS cascade from clonedDoc.styleSheets — not from
-          // the live DOM. Any background-image containing a data:image/svg+xml URL
-          // causes html2canvas to draw the SVG into a canvas; if the SVG has no
-          // explicit width/height that canvas is 0×0 and ctx.createPattern throws
-          // InvalidStateError. CSS injection and pre-clone DOM changes are both
-          // ineffective because html2canvas re-parses its own copy of the sheets.
-          //
-          // Fix: mutate the CSSStyleRule objects in clonedDoc.styleSheets directly —
-          // this is the only path that reliably reaches html2canvas's renderer.
-          const patchRules = (rules: CSSRuleList) => {
-            Array.from(rules).forEach(rule => {
-              try {
-                if (rule instanceof CSSStyleRule) {
-                  const bg = rule.style.getPropertyValue('background-image')
-                  if (bg.includes('data:image/svg+xml')) {
-                    rule.style.setProperty('background-image', 'none', 'important')
-                  }
-                }
-                // Recurse into @media, @supports, @layer, etc.
-                if ('cssRules' in rule && (rule as CSSGroupingRule).cssRules) {
-                  patchRules((rule as CSSGroupingRule).cssRules)
-                }
-              } catch { /* ignore restricted/cross-origin rules */ }
-            })
-          }
-          Array.from(clonedDoc.styleSheets).forEach(sheet => {
-            try { patchRules(sheet.cssRules) } catch { /* cross-origin sheet */ }
-          })
-
-          // Also clear any inline SVG backgrounds on individual elements.
-          clonedDoc.querySelectorAll<HTMLElement>('[style]').forEach(el => {
-            if (el.style.backgroundImage.includes('data:image/svg+xml')) {
-              el.style.setProperty('background-image', 'none', 'important')
-            }
-          })
-
+        onclone: (_clonedDoc, clonedEl) => {
           // html2canvas reclones elements internally so canvas pixels are lost.
           // Redraw hex grid + wave borders from the live source canvases.
           clonedEl.querySelectorAll<HTMLCanvasElement>('[data-cert-pattern]').forEach((dst, i) => {
@@ -246,6 +231,7 @@ export function CertificateModal({ open, onClose }: Props) {
       console.error('Certificate download failed:', err)
       setDownloadError(`PDF failed: ${msg}`)
     } finally {
+      ctxProto.createPattern = origCreatePattern
       document.body.removeChild(wrapper)
       setIsDownloading(false)
     }
