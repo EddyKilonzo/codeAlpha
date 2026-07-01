@@ -20,7 +20,7 @@ export function ExampleCallout({ card }: Props) {
         </div>
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="px-8 py-6 space-y-4">
         <p className="text-sm text-foreground/90 leading-relaxed">{card.detail}</p>
 
         {card.example && (

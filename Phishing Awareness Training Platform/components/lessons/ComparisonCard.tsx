@@ -22,7 +22,7 @@ export function ComparisonCard({ card }: Props) {
       {/* Comparison grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border">
         {/* Left — typically "bad" or "before" */}
-        <div className="p-6 space-y-3">
+        <div className="px-8 py-6 space-y-3">
           <div className="flex items-center gap-2">
             <div className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive/15">
               <X className="h-3 w-3 text-destructive" />
@@ -49,7 +49,7 @@ export function ComparisonCard({ card }: Props) {
         </div>
 
         {/* Right — typically "good" or "after" */}
-        <div className="p-6 space-y-3 bg-brand/[0.03]">
+        <div className="px-8 py-6 space-y-3 bg-brand/[0.03]">
           <div className="flex items-center gap-2">
             <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand/15">
               <Check className="h-3 w-3 text-brand" />
@@ -77,7 +77,7 @@ export function ComparisonCard({ card }: Props) {
       </div>
 
       {card.detail && (
-        <div className="px-6 py-5 border-t border-border bg-muted/30">
+        <div className="px-8 py-6 border-t border-border bg-muted/30">
           <p className="text-xs text-muted-foreground leading-relaxed">{card.detail}</p>
         </div>
       )}

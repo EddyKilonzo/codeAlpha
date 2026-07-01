@@ -65,7 +65,7 @@ export function ExpandableCard({ card }: Props) {
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className="overflow-hidden"
           >
-            <div className="px-6 pb-6 border-t border-border/60 pt-5 space-y-4">
+            <div className="px-8 pb-8 border-t border-border/60 pt-6 space-y-4">
               <p className="text-sm text-foreground leading-relaxed">{card.detail}</p>
 
               {card.items && card.items.length > 0 && (

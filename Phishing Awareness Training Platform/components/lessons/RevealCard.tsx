@@ -47,7 +47,7 @@ export function RevealCard({ card }: Props) {
             transition={{ duration: 0.25, ease: 'easeOut' }}
             className="overflow-hidden"
           >
-            <div className="px-6 pb-6 border-t border-border pt-5 space-y-3">
+            <div className="px-8 pb-8 border-t border-border pt-6 space-y-4">
               <p className="text-sm text-foreground leading-relaxed">{card.detail}</p>
 
               {card.example && (

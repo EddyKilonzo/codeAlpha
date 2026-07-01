@@ -22,13 +22,13 @@ export function StatCard({ card }: Props) {
       </div>
 
       {card.detail && (
-        <div className="px-6 pt-5 pb-2">
+        <div className="px-8 pt-6 pb-3">
           <p className="text-sm text-foreground/90 leading-relaxed">{card.detail}</p>
         </div>
       )}
 
       {card.items && card.items.length > 0 && (
-        <div className="px-6 pb-6 pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="px-8 pb-8 pt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {card.items.map((item, i) => (
             <motion.div
               key={i}
@@ -36,9 +36,9 @@ export function StatCard({ card }: Props) {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.07 }}
               viewport={{ once: true }}
-              className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2"
+              className="flex items-start gap-2.5 rounded-xl bg-muted/50 px-4 py-3"
             >
-              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
               <span className="text-xs text-foreground/90 leading-relaxed">{item}</span>
             </motion.div>
           ))}
@@ -46,7 +46,7 @@ export function StatCard({ card }: Props) {
       )}
 
       {card.source && (
-        <div className="px-6 pb-5">
+        <div className="px-8 pb-6">
           <p className="text-xs text-muted-foreground">Source: {card.source}</p>
         </div>
       )}

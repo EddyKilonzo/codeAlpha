@@ -45,7 +45,7 @@ export function WarningCard({ card }: Props) {
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className="overflow-hidden"
           >
-            <div className="px-6 pb-6 border-t border-amber-200 dark:border-amber-800/40 pt-5 space-y-4">
+            <div className="px-8 pb-8 border-t border-amber-200 dark:border-amber-800/40 pt-6 space-y-4">
               <p className="text-sm text-foreground leading-relaxed">{card.detail}</p>
 
               {card.items && (
