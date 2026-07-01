@@ -60,7 +60,7 @@ export function WarningCard({ card }: Props) {
               )}
 
               {card.example && (
-                <div className="rounded-lg bg-white/70 dark:bg-black/20 border border-amber-200 dark:border-amber-800/40 p-4">
+                <div className="rounded-xl bg-white/70 dark:bg-black/20 border border-amber-200 dark:border-amber-800/40 p-5">
                   <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">Example</p>
                   <p className="text-sm text-foreground/90 leading-relaxed font-mono text-xs">{card.example}</p>
                 </div>

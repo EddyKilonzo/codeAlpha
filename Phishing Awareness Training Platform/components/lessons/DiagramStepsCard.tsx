@@ -25,13 +25,13 @@ export function DiagramStepsCard({ card }: Props) {
   if (!card.steps?.length) return null
 
   return (
-    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-      <div className="p-5 border-b border-border">
+    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-border">
         <p className="text-sm font-semibold text-foreground">{card.title}</p>
         <p className="mt-1 text-sm text-muted-foreground">{card.summary}</p>
       </div>
 
-      <div className="p-5">
+      <div className="px-8 py-6">
         <div className="relative">
           {/* Vertical connecting line */}
           <div className="absolute left-[19px] top-6 bottom-6 w-px bg-border" aria-hidden />

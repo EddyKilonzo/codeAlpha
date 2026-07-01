@@ -51,7 +51,7 @@ export function RevealCard({ card }: Props) {
               <p className="text-sm text-foreground leading-relaxed">{card.detail}</p>
 
               {card.example && (
-                <div className="rounded-lg bg-brand/5 border border-brand/20 p-4">
+                <div className="rounded-xl bg-brand/5 border border-brand/20 p-5">
                   <p className="text-xs font-semibold text-brand mb-1 uppercase tracking-wide">Real-World Example</p>
                   <p className="text-sm text-foreground/90 leading-relaxed italic">{card.example}</p>
                 </div>
