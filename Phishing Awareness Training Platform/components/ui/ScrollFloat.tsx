@@ -37,10 +37,10 @@ const ScrollFloat = ({
     // Split on whitespace but keep the separators so each word can be wrapped in a
     // non-breaking span. Characters stay inline-block for the animation, but a line
     // break can only fall between words — never mid-word (fixes mobile jumbling).
-    const tokens = text.split(/(s+)/)
+    const tokens = text.split(/(\s+)/)
     return tokens.map((token, tokenIndex) => {
       if (token === '') return null
-      if (/^s+$/.test(token)) {
+      if (/^\s+$/.test(token)) {
         return <span key={`space-${tokenIndex}`}>{' '}</span>
       }
       return (
