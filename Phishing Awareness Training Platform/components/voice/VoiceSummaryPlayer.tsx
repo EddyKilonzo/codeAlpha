@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Play, Pause, RotateCcw, SkipForward, Volume2, VolumeX,
@@ -70,9 +70,45 @@ export function VoiceSummaryPlayer({ moduleId, phase, onComplete }: Props) {
 
   const speech = useSpeech(text, handleComplete)
 
-  const progressPct = speech.words.length > 0
+  // ── Time-based progress (fallback when onboundary doesn't fire on Windows TTS) ──
+  const totalMsRef = useRef(1)
+  totalMsRef.current = Math.max(1, (speech.estimatedSeconds / speech.rate) * 1000)
+  const playStartRef = useRef<number | null>(null)
+  const accMsRef = useRef(0)
+  const wasPausedRef = useRef(false)
+  const [timePct, setTimePct] = useState(0)
+
+  useEffect(() => {
+    if (speech.isPlaying) {
+      if (!wasPausedRef.current) {
+        accMsRef.current = 0
+        setTimePct(0)
+      }
+      wasPausedRef.current = false
+      playStartRef.current = Date.now()
+      const id = setInterval(() => {
+        const elapsed = accMsRef.current + (Date.now() - (playStartRef.current ?? Date.now()))
+        setTimePct(Math.min(99, Math.round((elapsed / totalMsRef.current) * 100)))
+      }, 200)
+      return () => clearInterval(id)
+    } else if (speech.isPaused) {
+      wasPausedRef.current = true
+      if (playStartRef.current != null) {
+        accMsRef.current += Date.now() - playStartRef.current
+        playStartRef.current = null
+      }
+    } else {
+      wasPausedRef.current = false
+      accMsRef.current = 0
+      playStartRef.current = null
+      setTimePct(0)
+    }
+  }, [speech.isPlaying, speech.isPaused])
+
+  const wordBasedPct = speech.words.length > 0
     ? Math.round((speech.wordIndex / speech.words.length) * 100)
     : 0
+  const progressPct = Math.max(wordBasedPct, timePct)
 
   const remaining = Math.round(
     (speech.estimatedSeconds * (1 - progressPct / 100)) / speech.rate
@@ -85,6 +121,7 @@ export function VoiceSummaryPlayer({ moduleId, phase, onComplete }: Props) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl border border-brand/20 bg-gradient-to-br from-brand/5 via-background to-background overflow-hidden"
+      style={{ boxShadow: 'rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset' }}
     >
       {/* Top bar */}
       <div className="flex items-center gap-3 border-b border-border/60 px-5 py-3">

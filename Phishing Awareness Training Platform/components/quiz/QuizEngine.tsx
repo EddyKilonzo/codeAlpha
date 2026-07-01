@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle2, XCircle, ChevronRight, Check, X, Circle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,9 +9,83 @@ import { HintSystem } from './HintSystem'
 import { QuizResults } from './QuizResults'
 import { useProgress } from '@/hooks/useProgress'
 import { XP_REWARDS, XP_PENALTIES, PASSING_SCORE } from '@/lib/constants'
-import type { Quiz, Question } from '@/types'
+import type { Quiz, Question, EmailContent } from '@/types'
 
 // ---------- individual question renderers ----------
+
+function EmailPreview({ email }: { email: EmailContent }) {
+  return (
+    <div className="rounded-xl border border-border bg-white dark:bg-zinc-900 overflow-hidden text-[12px] shadow-sm mb-4">
+      {/* Email client chrome */}
+      <div className="bg-muted/60 border-b border-border px-3 py-2 flex items-center gap-2">
+        <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
+        <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+        <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
+        <span className="ml-2 text-[11px] text-muted-foreground font-medium">Mail — Inbox</span>
+      </div>
+
+      {/* Headers */}
+      <div className="border-b border-border/60 px-4 py-3 space-y-1.5 bg-card">
+        <div className="flex items-start gap-2">
+          <span className="text-muted-foreground w-12 shrink-0 text-right text-[11px] mt-0.5">From:</span>
+          <span className="font-medium text-foreground">
+            {email.fromDisplay}{' '}
+            <span className="font-normal text-orange-600 dark:text-orange-400 font-mono text-[11px]">
+              &lt;{email.fromAddr}&gt;
+            </span>
+          </span>
+        </div>
+        <div className="flex items-start gap-2">
+          <span className="text-muted-foreground w-12 shrink-0 text-right text-[11px] mt-0.5">Subject:</span>
+          <span className="font-semibold text-foreground">{email.subject}</span>
+        </div>
+        <div className="flex items-start gap-2">
+          <span className="text-muted-foreground w-12 shrink-0 text-right text-[11px] mt-0.5">Date:</span>
+          <span className="text-muted-foreground">{email.date}</span>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="px-4 py-4 space-y-3 bg-white dark:bg-zinc-900">
+        {/* Fake Amazon logo bar */}
+        <div className="flex items-center gap-2 pb-3 border-b border-border/40">
+          <div className="flex items-center gap-1">
+            <span className="font-black text-[18px] text-[#FF9900] tracking-tight">amazon</span>
+            <span className="text-[10px] text-muted-foreground mt-1">.com</span>
+          </div>
+        </div>
+
+        {email.body.greeting && (
+          <p className="text-foreground">{email.body.greeting}</p>
+        )}
+
+        {email.body.paragraphs.map((p, i) => (
+          <p key={i} className={cn(
+            'text-foreground leading-relaxed',
+            p.includes('24 hours') && 'font-semibold text-red-700 dark:text-red-400',
+          )}>
+            {p}
+          </p>
+        ))}
+
+        {email.body.linkText && email.body.linkUrl && (
+          <div className="py-1">
+            <span className="inline-block bg-[#FF9900] text-black text-[11px] font-bold px-4 py-2 rounded cursor-default">
+              {email.body.linkText}
+            </span>
+            <p className="mt-1.5 text-[10px] font-mono text-blue-600 dark:text-blue-400 break-all">
+              {email.body.linkUrl}
+            </p>
+          </div>
+        )}
+
+        {email.body.signoff && (
+          <p className="text-muted-foreground pt-1 border-t border-border/40">{email.body.signoff}</p>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function MultipleChoice({
   question,
@@ -90,7 +164,7 @@ function TrueFalse({
   submitted: boolean
 }) {
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
       {['True', 'False'].map((opt) => {
         const isSelected = selected === opt
         const isCorrect = opt === question.answer
@@ -104,7 +178,7 @@ function TrueFalse({
             whileHover={!submitted ? { scale: 1.02, transition: { duration: 0.15 } } : {}}
             whileTap={!submitted ? { scale: 0.97, transition: { duration: 0.08 } } : {}}
             className={cn(
-              'flex-1 rounded-2xl border-2 p-6 text-center font-bold text-lg transition-colors',
+              'flex-1 rounded-2xl border-2 p-4 sm:p-6 text-center font-bold text-base sm:text-lg transition-colors',
               !showState && !isSelected && 'border-border bg-card hover:border-brand/40',
               !showState && isSelected && 'border-brand bg-brand/10 text-brand',
               showState && isCorrect && 'border-brand bg-brand/10 text-brand',
@@ -236,6 +310,14 @@ function UrlRecognition({
   )
 }
 
+const MATCH_COLORS = ['#16a34a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444']
+
+type ArrowLine = {
+  key: string
+  x1: number; y1: number; x2: number; y2: number
+  colorIdx: number; correct?: boolean
+}
+
 function MatchPair({
   question,
   selected,
@@ -249,18 +331,55 @@ function MatchPair({
 }) {
   const pairs = question.matchPairs ?? {}
   const keys = Object.keys(pairs)
-  const values = Object.values(pairs)
+  const allValues = Object.values(pairs)
+
+  // Shuffle definitions once per mount (component is re-keyed per question)
+  const [shuffledValues] = useState(() => [...allValues].sort(() => Math.random() - 0.5))
 
   const [activeKey, setActiveKey] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const termRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const defRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const [arrows, setArrows] = useState<ArrowLine[]>([])
+
+  // Serialize selected so the effect only reruns when content actually changes
+  const selectedStr = JSON.stringify(selected)
+
+  // Redraw arrows when selections or submitted state change (not on every render)
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    const next: ArrowLine[] = []
+    keys.forEach((key, ki) => {
+      if (!selected[key]) return
+      const termEl = termRefs.current[ki]
+      const vi = shuffledValues.indexOf(selected[key])
+      const defEl = vi >= 0 ? defRefs.current[vi] : null
+      if (!termEl || !defEl) return
+      const tr = termEl.getBoundingClientRect()
+      const dr = defEl.getBoundingClientRect()
+      next.push({
+        key,
+        x1: tr.right - rect.left,
+        y1: tr.top - rect.top + tr.height / 2,
+        x2: dr.left - rect.left,
+        y2: dr.top - rect.top + dr.height / 2,
+        colorIdx: ki,
+        correct: pairs[key] === selected[key], // always compute — live feedback
+      })
+    })
+    setArrows(next)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStr, submitted]) // stable primitives — won't loop
 
   const handleKeyClick = (key: string) => {
     if (submitted) return
-    setActiveKey(activeKey === key ? null : key)
+    setActiveKey(prev => prev === key ? null : key)
   }
 
   const handleValueClick = (value: string) => {
     if (submitted || !activeKey) return
-    // Unlink this value from whichever key previously held it, then assign to activeKey
     const updated: Record<string, string> = {}
     for (const k of Object.keys(selected)) {
       if (selected[k] !== value) updated[k] = selected[k]
@@ -271,56 +390,134 @@ function MatchPair({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {/* Left column — terms */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Terms</p>
-        {keys.map((key) => (
-          <button
-            key={key}
-            onClick={() => handleKeyClick(key)}
-            disabled={submitted}
-            className={cn(
-              'w-full rounded-lg border p-3 text-left text-xs font-medium transition-all',
-              activeKey === key ? 'border-brand bg-brand/10 text-brand' : 'border-border bg-card hover:border-brand/30',
-              submitted && pairs[key] === selected[key] ? 'border-brand/40 bg-brand/5 text-brand' : '',
-              submitted && pairs[key] !== selected[key] && selected[key] ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400' : '',
-            )}
-          >
-            {key}
-            {selected[key] && (
-              <span className="block text-[10px] text-muted-foreground mt-0.5 truncate">→ {selected[key]}</span>
-            )}
-          </button>
-        ))}
+    <div className="space-y-2">
+      {/* Instruction bar */}
+      <div className="text-center text-[11px] min-h-[20px]">
+        {!submitted && (
+          activeKey
+            ? <span className="font-medium text-brand">
+                &ldquo;{activeKey}&rdquo; selected &mdash; now click its definition
+              </span>
+            : <span className="text-muted-foreground">Click a term, then click its matching definition</span>
+        )}
       </div>
 
-      {/* Right column — definitions */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Definitions</p>
-        {values.map((value) => {
-          const isMatched = Object.values(selected).includes(value)
-          return (
-            <button
-              key={value}
-              onClick={() => handleValueClick(value)}
-              disabled={submitted || (!activeKey && isMatched)}
-              className={cn(
-                'w-full rounded-lg border p-3 text-left text-xs transition-all',
-                isMatched && !activeKey ? 'border-brand/30 bg-brand/5 opacity-70' : 'border-border bg-card hover:border-brand/30',
-                activeKey ? 'cursor-pointer hover:bg-brand/5 hover:border-brand/40' : '',
-              )}
-            >
-              {value}
-            </button>
-          )
-        })}
+      {/* Three-column layout: terms | arrow lane | definitions */}
+      <div ref={containerRef} className="relative grid grid-cols-[1fr_48px_1fr] gap-y-0">
+
+        {/* SVG arrow overlay */}
+        <svg
+          className="pointer-events-none absolute inset-0 overflow-visible"
+          style={{ width: '100%', height: '100%', zIndex: 2 }}
+          aria-hidden="true"
+        >
+          <defs>
+            <marker id="mah-ok" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0,1 L7,4 L0,7 Z" fill="#16a34a" />
+            </marker>
+            <marker id="mah-err" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0,1 L7,4 L0,7 Z" fill="#ef4444" />
+            </marker>
+          </defs>
+          {arrows.map((a) => {
+            const col = a.correct ? '#16a34a' : '#ef4444'
+            const mid = (a.x1 + a.x2) / 2
+            const markerId = a.correct ? 'mah-ok' : 'mah-err'
+            return (
+              <path
+                key={a.key}
+                d={`M${a.x1},${a.y1} C${mid},${a.y1} ${mid},${a.y2} ${a.x2},${a.y2}`}
+                stroke={col}
+                strokeWidth="2"
+                fill="none"
+                strokeDasharray={submitted ? undefined : '5 3'}
+                markerEnd={`url(#${markerId})`}
+                opacity={0.9}
+              />
+            )
+          })}
+        </svg>
+
+        {/* Left: Terms */}
+        <div className="col-start-1 space-y-2 pr-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground pb-0.5">Terms</p>
+          {keys.map((key, i) => {
+            const isActive = activeKey === key
+            const isMatched = !!selected[key]
+            const isCorrect = isMatched && pairs[key] === selected[key]
+            const isWrong = isMatched && !isCorrect
+            return (
+              <button
+                key={key}
+                ref={el => { termRefs.current[i] = el }}
+                onClick={() => handleKeyClick(key)}
+                disabled={submitted}
+                className={cn(
+                  'relative w-full rounded-lg border p-2 sm:p-2.5 text-left text-[11px] sm:text-xs font-semibold transition-all',
+                  !isActive && !isMatched && 'border-border bg-card hover:border-brand/40 hover:bg-brand/5 cursor-pointer',
+                  isActive && 'border-brand bg-brand/10 text-brand ring-2 ring-brand/20',
+                  isCorrect && !isActive && 'border-brand/60 bg-brand/5 text-brand',
+                  isWrong && !isActive && 'border-red-400 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400',
+                  submitted && 'cursor-default',
+                  !isMatched && !isActive && !submitted && 'cursor-pointer',
+                )}
+              >
+                {key}
+                {isMatched && !isActive && (
+                  isCorrect
+                    ? <CheckCircle2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-brand" />
+                    : <XCircle className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-red-500" />
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Middle: arrow lane */}
+        <div className="col-start-2" />
+
+        {/* Right: Definitions (shuffled) */}
+        <div className="col-start-3 space-y-2 pl-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground pb-0.5">Definitions</p>
+          {shuffledValues.map((value, vi) => {
+            const matchedKey = Object.keys(selected).find(k => selected[k] === value)
+            const isCorrect = !!matchedKey && pairs[matchedKey] === value
+            const isWrong = !!matchedKey && !isCorrect
+            const canClick = !!activeKey && !submitted
+            return (
+              <button
+                key={value}
+                ref={el => { defRefs.current[vi] = el }}
+                onClick={() => handleValueClick(value)}
+                disabled={submitted || (!activeKey && !!matchedKey)}
+                className={cn(
+                  'relative w-full rounded-lg border p-2 sm:p-2.5 text-left text-[11px] sm:text-xs transition-all leading-snug',
+                  !matchedKey && !canClick && 'border-border bg-card cursor-default',
+                  !matchedKey && canClick && 'border-border bg-card cursor-pointer hover:bg-brand/5 hover:border-brand/40',
+                  isCorrect && 'border-brand/60 bg-brand/5',
+                  isWrong && 'border-red-400 bg-red-50 dark:bg-red-950/30',
+                  matchedKey && canClick && 'cursor-pointer',
+                  submitted && !matchedKey && 'opacity-40',
+                )}
+              >
+                {value}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      {activeKey && (
-        <p className="col-span-2 text-xs text-brand">
-          Selected: <strong>{activeKey}</strong> — now click the matching definition
-        </p>
+      {/* After submit: show correct answers for wrong pairs */}
+      {submitted && (
+        <div className="space-y-1 pt-1">
+          {keys.filter(k => pairs[k] !== selected[k]).map(k => (
+            <p key={k} className="text-[10px] text-muted-foreground">
+              <span className="font-semibold text-foreground">{k}</span>
+              {' → '}
+              <span className="text-brand">{pairs[k]}</span>
+            </p>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -458,14 +655,15 @@ function checkAnswer(question: Question, userAnswer: unknown): boolean {
     const ans = Array.isArray(correct) ? correct : []
     return ans.length === ua.length && ans.every((a) => ua.includes(a)) && ua.every((u) => ans.includes(u))
   }
-  if (Array.isArray(correct)) {
-    const ua = Array.isArray(userAnswer) ? userAnswer : []
-    return correct.length === ua.length && correct.every((c) => ua.includes(c)) && ua.every((u) => correct.includes(u))
-  }
+  // match-pair must come before Array.isArray(correct) — its answer field is an array of keys
   if (question.type === 'match-pair') {
     const pairs = question.matchPairs ?? {}
     const ua = userAnswer as Record<string, string>
     return Object.keys(pairs).every((k) => ua[k] === pairs[k])
+  }
+  if (Array.isArray(correct)) {
+    const ua = Array.isArray(userAnswer) ? userAnswer : []
+    return correct.length === ua.length && correct.every((c) => ua.includes(c)) && ua.every((u) => correct.includes(u))
   }
   if (question.type === 'timeline-ordering') {
     const ua = Array.isArray(userAnswer) ? userAnswer : []
@@ -668,6 +866,9 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
                 submitted={state.phase === 'feedback'}
               />
             )}
+            {question.type === 'email-inspection' && question.emailContent && (
+              <EmailPreview email={question.emailContent} />
+            )}
             {(question.type === 'multiple-select' || question.type === 'email-inspection') && (
               <MultipleSelect
                 question={question}
@@ -689,6 +890,7 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
             )}
             {question.type === 'match-pair' && (
               <MatchPair
+                key={question.id}
                 question={question}
                 selected={(currentAnswer as Record<string, string>) ?? {}}
                 onSelect={(v) => setAnswer(question.id, v)}

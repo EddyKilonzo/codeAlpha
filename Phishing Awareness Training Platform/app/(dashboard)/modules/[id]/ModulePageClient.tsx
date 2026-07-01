@@ -262,7 +262,7 @@ export function ModulePageClient({ module }: Props) {
           )}
         </div>
         <p className="text-[13px] text-muted-foreground leading-relaxed max-w-2xl">{module.description}</p>
-        <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> ~{module.estimatedMinutes} min</span>
           <span className="flex items-center gap-1.5 text-brand font-semibold"><Star className="h-3 w-3" /> +{module.xpReward} XP</span>
           {quizScore && (
@@ -274,11 +274,11 @@ export function ModulePageClient({ module }: Props) {
       </div>
 
       {/* Tab bar — sticky below header, with reading progress bar */}
-      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 overflow-hidden">
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6">
         {activeTab === 'lesson' && <LessonReadingProgress />}
         <div
-          className="flex gap-0 border-b border-border/50 overflow-x-auto px-4 sm:px-6"
-          style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(16px)' }}
+          className="flex gap-0 border-b border-border/50 px-4 sm:px-6"
+          style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(16px)', boxShadow: 'rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset' }}
         >
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -287,23 +287,24 @@ export function ModulePageClient({ module }: Props) {
             <button
               key={tab.id}
               onClick={() => switchTab(tab.id)}
+              aria-label={tab.label}
               className={cn(
-                'relative flex items-center gap-2 px-4 py-3 text-[13px] font-medium transition-colors whitespace-nowrap',
+                'relative flex flex-1 justify-center items-center gap-1.5 px-2 py-2.5 text-[12px] sm:flex-none sm:gap-2 sm:px-4 sm:py-3 sm:text-[13px] font-medium transition-colors whitespace-nowrap',
                 isActive ? 'text-brand' : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <Icon className="h-4 w-4" />
-              {tab.label}
+              <Icon className="h-4 w-4 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
               {tab.count && (
                 <span className={cn(
-                  'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                  'hidden sm:inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-bold',
                   isActive ? 'bg-brand/10 text-brand' : 'bg-muted text-muted-foreground'
                 )}>
                   {tab.count}
                 </span>
               )}
               {tab.badge && (
-                <span className="rounded-full bg-brand/10 text-brand px-1.5 py-0.5 text-[10px] font-bold">
+                <span className="hidden sm:inline-flex rounded-full bg-brand/10 text-brand px-1.5 py-0.5 text-[10px] font-bold">
                   {tab.badge}
                 </span>
               )}
@@ -329,6 +330,8 @@ export function ModulePageClient({ module }: Props) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.18 }}
+          className="pt-2 sm:pt-4"
+          style={{ boxShadow: 'rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset' }}
         >
           {/* LESSON TAB */}
           {activeTab === 'lesson' && (
@@ -405,8 +408,19 @@ export function ModulePageClient({ module }: Props) {
             <div className="space-y-8">
               {simulations.length > 0 ? (
                 <>
-                  {simulations.map((sim) => (
-                    <SimulationRenderer key={sim.id} sim={sim} />
+                  {simulations.map((sim, i) => (
+                    <div
+                      key={sim.id}
+                      className="rounded-2xl border border-border/60 bg-card p-4 sm:p-6"
+                      style={{ boxShadow: 'rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset' }}
+                    >
+                      {simulations.length > 1 && (
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+                          Simulation {i + 1} of {simulations.length}
+                        </p>
+                      )}
+                      <SimulationRenderer sim={sim} />
+                    </div>
                   ))}
                   <div className="pt-2">
                     <button

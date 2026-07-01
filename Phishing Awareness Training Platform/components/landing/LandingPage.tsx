@@ -9,6 +9,11 @@ import {
   Award, BookOpen, Trophy, ArrowRight, ChevronDown,
   ShieldAlert, Fish, Crosshair, FileSearch, Mail, Brain, Clock, Star, Zap,
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
+const CertificateTemplate = dynamic(
+  () => import('@/components/certificate/CertificateTemplate').then(m => ({ default: m.CertificateTemplate })),
+  { ssr: false }
+)
 import { cn } from '@/lib/utils'
 
 // ─── Floating icon positions — parallax only, no bounce ──────────────────────
@@ -228,7 +233,7 @@ function LandingNav() {
 // ─── Features section ─────────────────────────────────────────────────────────
 function FeaturesSection() {
   return (
-    <section id="features" className="relative bg-[#f5f7fa] py-20 sm:py-28 px-4 border-y border-black/[0.06]">
+    <section id="features" className="relative bg-[#f5f7fa] py-20 sm:py-28 px-4 border-y border-black/[0.06] hex-bg">
       <div className="mx-auto max-w-5xl">
         <motion.div
           initial={{ opacity: 0, y: 22 }}
@@ -270,7 +275,7 @@ function FeaturesSection() {
 // ─── Modules section ──────────────────────────────────────────────────────────
 function ModulesSection() {
   return (
-    <section id="modules" className="relative bg-white py-20 sm:py-28 px-4">
+    <section id="modules" className="relative bg-white py-20 sm:py-28 px-4 hex-bg">
       <div className="mx-auto max-w-5xl">
         <motion.div
           initial={{ opacity: 0, y: 22 }}
@@ -335,6 +340,107 @@ function ModulesSection() {
   )
 }
 
+// ─── Certificate section ──────────────────────────────────────────────────────
+const SAMPLE_CERT_DATA = {
+  userName: 'Alex Johnson',
+  completionDate: 'June 30, 2026',
+  averageScore: 94,
+  certificateId: 'PS-2026-EXAMPLE',
+  totalModules: 6,
+}
+
+function CertificateSection() {
+  const [scale, setScale] = useState(0.72)
+
+  useEffect(() => {
+    const update = () => {
+      // available width = viewport minus section px-4 padding (32px), capped at max-w-5xl (1024px)
+      const available = Math.min(window.innerWidth - 32, 1024 - 32)
+      setScale(Math.min(available / 900, 0.72))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
+  const scaledWidth = Math.round(900 * scale)
+  const scaledHeight = Math.round(640 * scale)
+
+  return (
+    <section id="certificate" className="relative py-20 sm:py-28 px-4 bg-[#f5f7fa] border-t border-black/[0.06] overflow-hidden hex-bg">
+      <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-[radial-gradient(ellipse,rgba(22,163,74,0.07)_0%,transparent_65%)]" />
+
+      <div className="relative mx-auto max-w-5xl">
+        <motion.div
+          initial={{ opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-14"
+        >
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand mb-4">Your Achievement</p>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight leading-[1.08]">
+            Finish the course,<br />
+            <span className="text-muted-foreground/40">earn your certificate.</span>
+          </h2>
+          <p className="mt-4 text-muted-foreground text-[15px] max-w-md mx-auto leading-relaxed">
+            Complete all 6 modules and pass all assessments to receive a professionally designed PDF certificate — downloadable, printable, and shareable.
+          </p>
+        </motion.div>
+
+        {/* Real certificate preview — same component used to generate the PDF */}
+        <motion.div
+          initial={{ opacity: 0, y: 32, scale: 0.97 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="relative mx-auto"
+          style={{ width: `${scaledWidth}px` }}
+        >
+          {/* EXAMPLE badge */}
+          <div className="absolute -top-3 right-2 z-10 flex items-center gap-1.5 bg-brand text-white text-[10px] font-extrabold tracking-widest uppercase px-3.5 py-1.5 rounded-full shadow-md select-none pointer-events-none">
+            <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+            Example
+          </div>
+
+          {/* Outer shadow + border wrapper — exact scaled size, no empty space */}
+          <div
+            className="overflow-hidden rounded-xl"
+            style={{
+              width: `${scaledWidth}px`,
+              height: `${scaledHeight}px`,
+              boxShadow: '0 24px 80px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.08)',
+              border: '1px solid rgba(22,163,74,0.18)',
+            }}
+          >
+            <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: '900px', height: '640px' }}>
+              <CertificateTemplate data={SAMPLE_CERT_DATA} />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* CTA row */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="text-center mt-12"
+        >
+          <Link
+            href="/dashboard"
+            className="group inline-flex items-center gap-2 rounded-xl border border-brand/40 bg-brand/[0.06] px-7 py-3 text-[14px] font-semibold text-brand hover:bg-brand/[0.1] hover:border-brand/60 transition-all duration-200"
+          >
+            Start Earning Yours
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
+          <p className="mt-3 text-[12px] text-muted-foreground/50">Free · No account required · Instant PDF download</p>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
 // ─── Main LandingPage ─────────────────────────────────────────────────────────
 export function LandingPage() {
   const heroRef = useRef<HTMLDivElement>(null)
@@ -356,24 +462,16 @@ export function LandingPage() {
   }, [mouseX, mouseY])
 
   return (
-    <div className="min-h-screen bg-white text-foreground overflow-x-hidden">
+    <div className="min-h-screen bg-white text-foreground overflow-x-hidden hex-bg">
       <LandingNav />
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section
         ref={heroRef}
-        className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-20 sm:pt-36 pb-16 sm:pb-28 px-4 bg-white"
+        className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-20 sm:pt-36 pb-16 sm:pb-28 px-4 bg-white hex-bg"
       >
         {/* Background layers */}
         <div className="pointer-events-none select-none absolute inset-0">
-          {/* Dot grid — clearly visible on light bg */}
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.11) 1.5px, transparent 1.5px)',
-              backgroundSize: '26px 26px',
-            }}
-          />
           {/* Layered brand glow — two overlapping radials for depth */}
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[1100px] h-[700px] bg-[radial-gradient(ellipse,rgba(22,163,74,0.13)_0%,transparent_62%)]" />
           <div className="absolute top-1/3 left-1/3 w-[600px] h-[500px] bg-[radial-gradient(ellipse,rgba(22,163,74,0.06)_0%,transparent_70%)] blur-3xl" />
@@ -498,6 +596,7 @@ export function LandingPage() {
 
       <FeaturesSection />
       <ModulesSection />
+      <CertificateSection />
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="border-t border-black/[0.06] py-16 px-4 bg-[#f5f7fa]">

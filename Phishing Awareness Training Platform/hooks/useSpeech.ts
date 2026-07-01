@@ -52,6 +52,11 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
   // Track character position for pause/resume (Chrome's native pause is broken)
   const charIndexRef = useRef(0)
   const pausedAtCharRef = useRef(0)
+  // Guard: cancel() (used for pause/rate-change/replay) triggers onend — suppress it
+  const isCancelledRef = useRef(false)
+  // Time-based char estimation when onboundary doesn't fire (Windows TTS)
+  const segmentFromCharRef = useRef(0)
+  const segmentStartMsRef = useRef<number | null>(null)
 
   const words = text.split(/\s+/).filter(Boolean)
   const estimatedSeconds = Math.round((words.length / 150) * 60)
@@ -97,6 +102,11 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
       }
     }
     u.onend = () => {
+      // If cancel() was called explicitly (pause/rate-change/replay), ignore this event
+      if (isCancelledRef.current) {
+        isCancelledRef.current = false
+        return
+      }
       setIsPlaying(false)
       setIsPaused(false)
       setWordIndex(words.length)
@@ -119,33 +129,53 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
     }
   }, [])
 
+  // Estimate char position from elapsed time when onboundary hasn't fired
+  const estimateCharPosition = useCallback(() => {
+    if (charIndexRef.current > segmentFromCharRef.current) {
+      return charIndexRef.current // onboundary gave us a real position
+    }
+    const elapsedMs = segmentStartMsRef.current != null ? Date.now() - segmentStartMsRef.current : 0
+    const segText = text.slice(segmentFromCharRef.current)
+    const segWords = segText.split(/\s+/).filter(Boolean).length
+    const totalMs = Math.max(1, (segWords / 150) * 60000 / rateRef.current)
+    const fraction = Math.min(0.98, elapsedMs / totalMs)
+    return segmentFromCharRef.current + Math.round(fraction * segText.length)
+  }, [text])
+
   const play = useCallback(() => {
     if (!isSupported) return
+    isCancelledRef.current = true
     window.speechSynthesis.cancel()
     charIndexRef.current = 0
     pausedAtCharRef.current = 0
+    segmentFromCharRef.current = 0
     setWordIndex(0)
     const u = buildUtteranceFrom(0)
     utteranceRef.current = u
     window.speechSynthesis.speak(u)
+    segmentStartMsRef.current = Date.now()
     setIsPlaying(true)
     setIsPaused(false)
   }, [isSupported, buildUtteranceFrom])
 
   const pause = useCallback(() => {
     if (!isSupported || !isPlaying) return
-    // Save current position before cancelling (Chrome's native pause is broken)
-    pausedAtCharRef.current = charIndexRef.current
+    // Save current char position; fall back to time-based estimate when onboundary didn't fire
+    pausedAtCharRef.current = estimateCharPosition()
+    isCancelledRef.current = true
     window.speechSynthesis.cancel()
+    segmentStartMsRef.current = null
     setIsPlaying(false)
     setIsPaused(true)
-  }, [isSupported, isPlaying])
+  }, [isSupported, isPlaying, estimateCharPosition])
 
   const resume = useCallback(() => {
     if (!isSupported || !isPaused) return
+    segmentFromCharRef.current = pausedAtCharRef.current
     const u = buildUtteranceFrom(pausedAtCharRef.current)
     utteranceRef.current = u
     window.speechSynthesis.speak(u)
+    segmentStartMsRef.current = Date.now()
     setIsPlaying(true)
     setIsPaused(false)
   }, [isSupported, isPaused, buildUtteranceFrom])
@@ -171,17 +201,20 @@ export function useSpeech(text: string, onComplete?: () => void): UseSpeechRetur
     rateRef.current = r
     setRateState(r)
     if (isPlaying) {
-      // Restart from current position with new rate
-      const fromChar = charIndexRef.current
+      // Restart from estimated position with new rate
+      const fromChar = estimateCharPosition()
+      isCancelledRef.current = true
       window.speechSynthesis.cancel()
+      segmentFromCharRef.current = fromChar
       const u = buildUtteranceFrom(fromChar)
       utteranceRef.current = u
       window.speechSynthesis.speak(u)
+      segmentStartMsRef.current = Date.now()
       setIsPlaying(true)
       setIsPaused(false)
     }
     // If paused, pausedAtCharRef is already saved — resume will use new rate
-  }, [isPlaying, buildUtteranceFrom])
+  }, [isPlaying, buildUtteranceFrom, estimateCharPosition])
 
   const toggleMute = useCallback(() => {
     const next = !isMutedRef.current

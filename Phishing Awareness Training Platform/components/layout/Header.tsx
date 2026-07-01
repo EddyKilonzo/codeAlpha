@@ -59,12 +59,12 @@ export function Header() {
       <MobileNav />
 
       {/* Page context */}
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-bold text-foreground truncate tracking-tight">
+      <div className="flex-1 min-w-0 overflow-hidden">
+        <p className="text-[13px] font-bold text-foreground truncate tracking-tight leading-tight">
           {pageTitle}
         </p>
         {module && (
-          <p className="text-[10px] text-muted-foreground truncate font-medium">
+          <p className="text-[10px] text-muted-foreground truncate font-medium leading-tight">
             Module {module.order} of {MODULES.length}
           </p>
         )}

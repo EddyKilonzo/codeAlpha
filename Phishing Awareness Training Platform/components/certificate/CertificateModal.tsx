@@ -7,7 +7,7 @@ import { X, Download, Printer, User, ShieldCheck, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sanitizeName, sanitizeFilename } from '@/lib/sanitize'
 import { useProgress } from '@/hooks/useProgress'
-import { CertificateTemplate, type CertificateData } from './CertificateTemplate'
+import { CertificateTemplate, drawHexGrid, drawWaveStrip, type CertificateData } from './CertificateTemplate'
 
 // ── Confetti celebration ───────────────────────────────────────────────────
 const CONFETTI_COLORS = ['#16a34a', '#4ade80', '#86efac', '#22c55e', '#bbf7d0', '#15803d']
@@ -103,6 +103,7 @@ export function CertificateModal({ open, onClose }: Props) {
     progress.userName ? 'certificate' : 'name'
   )
   const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [showConfetti, setShowConfetti] = useState(!progress.userName)
   const certRef = useRef<HTMLDivElement>(null)
 
@@ -152,16 +153,64 @@ export function CertificateModal({ open, onClose }: Props) {
   const handleDownload = async () => {
     if (!certRef.current || isDownloading) return
     setIsDownloading(true)
+    setDownloadError(null)
+
+    // Place a full-size clone outside any overflow/scroll container so html2canvas
+    // captures all 900×640px without clipping.
+    const wrapper = document.createElement('div')
+    wrapper.style.cssText = 'position:fixed;top:0;left:-9999px;width:900px;height:640px;z-index:-1;pointer-events:none;'
+    const clone = certRef.current.cloneNode(true) as HTMLElement
+    wrapper.appendChild(clone)
+
+    // Grab live canvas references BEFORE html2canvas runs (used inside onclone).
+    const srcCanvases = Array.from(
+      certRef.current.querySelectorAll<HTMLCanvasElement>('[data-cert-pattern]')
+    )
+
+    // globals.css sets `background-image: url("data:image/svg+xml,...")` on
+    // `body`, `#main-content`, and `.hex-bg`. html2canvas clones the whole
+    // document, then tries to render body's SVG background →
+    // createPattern(0×0 canvas) → throws.
+    //
+    // Fix: set an inline `!important` override on the LIVE elements before
+    // html2canvas runs (it clones from the live DOM, so the override travels
+    // into the clone). Restore everything in finally.
+    const svgBgTargets: HTMLElement[] = [document.body]
+    const mainEl = document.getElementById('main-content')
+    if (mainEl) svgBgTargets.push(mainEl)
+    document.querySelectorAll<HTMLElement>('.hex-bg').forEach(el => svgBgTargets.push(el))
+    svgBgTargets.forEach(el => el.style.setProperty('background-image', 'none', 'important'))
+
+    document.body.appendChild(wrapper)
+
     try {
       const [html2canvas, { jsPDF }] = await Promise.all([
         import('html2canvas').then((m) => m.default),
         import('jspdf'),
       ])
-      const canvas = await html2canvas(certRef.current, {
+      const canvas = await html2canvas(clone, {
         scale: 2,
         useCORS: true,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#fcfaf7',
         logging: false,
+        width: 900,
+        height: 640,
+        onclone: (_clonedDoc, clonedEl) => {
+          // html2canvas reclones elements internally, so canvas pixels are lost.
+          // Redraw hex grid + wave borders from the live source canvases.
+          clonedEl.querySelectorAll<HTMLCanvasElement>('[data-cert-pattern]').forEach((dst, i) => {
+            const src = srcCanvases[i]
+            const pattern = dst.getAttribute('data-cert-pattern')
+            if (src) {
+              const ctx = dst.getContext('2d')
+              if (ctx) ctx.drawImage(src, 0, 0)
+            } else if (pattern === 'hex') {
+              drawHexGrid(dst)
+            } else if (pattern === 'wave') {
+              drawWaveStrip(dst)
+            }
+          })
+        },
       })
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
@@ -170,7 +219,14 @@ export function CertificateModal({ open, onClose }: Props) {
       pdf.addImage(imgData, 'PNG', 0, 0, w, h)
       const safeName = sanitizeFilename(certData.userName)
       pdf.save(`PhishShield-Certificate-${safeName}.pdf`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('Certificate download failed:', err)
+      setDownloadError(`PDF failed: ${msg}`)
     } finally {
+      // Restore SVG backgrounds on live elements
+      svgBgTargets.forEach(el => el.style.removeProperty('background-image'))
+      document.body.removeChild(wrapper)
       setIsDownloading(false)
     }
   }
@@ -408,6 +464,20 @@ export function CertificateModal({ open, onClose }: Props) {
                       )}
                     </AnimatePresence>
                   </div>
+
+                  {/* Error message */}
+                  <AnimatePresence>
+                    {downloadError && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        className="text-xs text-red-500 text-center"
+                      >
+                        {downloadError}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
 
                   {/* Actions — fade in after certificate appears */}
                   <motion.div

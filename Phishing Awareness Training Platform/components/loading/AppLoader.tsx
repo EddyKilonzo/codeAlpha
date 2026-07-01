@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useProgress } from '@/hooks/useProgress'
-
 const MESSAGES = [
   'Initializing Training...',
   'Loading Modules...',
@@ -12,12 +10,10 @@ const MESSAGES = [
   'Almost Ready...',
 ]
 
-const MIN_MS = 1800
+const MIN_MS = 500
 
 export function AppLoader() {
-  const { isHydrated } = useProgress()
   const [visible, setVisible] = useState(true)
-  const [ready, setReady] = useState(false)
   const [msgIdx, setMsgIdx] = useState(0)
 
   // Only show once per browser session
@@ -34,18 +30,14 @@ export function AppLoader() {
     return () => clearInterval(id)
   }, [visible])
 
-  // Track when hydration + minimum display time both complete
+  // Hide after minimum display time — localStorage hydrates synchronously so no need to gate on isHydrated
   useEffect(() => {
-    const minTimer = setTimeout(() => setReady(true), MIN_MS)
-    return () => clearTimeout(minTimer)
-  }, [])
-
-  useEffect(() => {
-    if (isHydrated && ready) {
+    const minTimer = setTimeout(() => {
       sessionStorage.setItem('ps_loaded', '1')
       setVisible(false)
-    }
-  }, [isHydrated, ready])
+    }, MIN_MS)
+    return () => clearTimeout(minTimer)
+  }, [])
 
   return (
     <AnimatePresence>

@@ -31,6 +31,21 @@ export interface HotspotRegion {
   explanation: string
 }
 
+export interface EmailContent {
+  fromDisplay: string
+  fromAddr: string
+  subject: string
+  date: string
+  body: {
+    greeting?: string
+    paragraphs: string[]
+    linkText?: string
+    linkUrl?: string
+    signoff?: string
+    orderNumber?: string
+  }
+}
+
 export interface Question {
   id: string
   type: QuestionType
@@ -46,6 +61,7 @@ export interface Question {
   hotspotRegions?: HotspotRegion[]
   timelineItems?: string[]
   scenario?: string
+  emailContent?: EmailContent
 }
 
 export interface Quiz {

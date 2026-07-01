@@ -130,7 +130,7 @@ export function DashboardClient() {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-brand/25 bg-brand/5 px-4 py-3 flex items-center gap-3 shadow-premium-sm"
+          className="rounded-xl border border-brand/25 bg-brand/5 px-4 py-3 flex flex-wrap items-center gap-3 shadow-premium-sm"
         >
           <PlayCircle className="h-5 w-5 text-brand shrink-0" />
           <div className="flex-1 min-w-0">
@@ -154,7 +154,7 @@ export function DashboardClient() {
             <Star className="h-4 w-4 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">Total XP</span>
           </div>
-          <p className="text-2xl font-black font-mono text-foreground">{animatedXP.toLocaleString()}</p>
+          <p className="text-xl sm:text-2xl font-black font-mono text-foreground truncate">{animatedXP.toLocaleString()}</p>
           <p className="text-[10px] text-brand font-semibold">+XP per module</p>
         </div>
 

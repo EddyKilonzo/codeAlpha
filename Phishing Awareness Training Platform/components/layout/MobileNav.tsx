@@ -27,14 +27,19 @@ export function MobileNav() {
   // Close on route change
   useEffect(() => { setOpen(false) }, [pathname])
 
-  // Lock body scroll while open
+  // Lock main-content scroll while open (body doesn't scroll — #main-content does)
   useEffect(() => {
+    const main = document.getElementById('main-content')
+    if (!main) return
     if (open) {
-      document.body.style.overflow = 'hidden'
+      main.style.overflow = 'hidden'
     } else {
-      document.body.style.overflow = ''
+      main.style.overflow = ''
     }
-    return () => { document.body.style.overflow = '' }
+    return () => {
+      const el = document.getElementById('main-content')
+      if (el) el.style.overflow = ''
+    }
   }, [open])
 
   const levelInfo = getLevelInfo(getLevelFromXP(progress.xp))
@@ -74,9 +79,9 @@ export function MobileNav() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 340, damping: 36, mass: 0.8 }}
-              className="fixed inset-y-0 left-0 z-[101] flex flex-col w-[280px] max-w-[85vw] overflow-hidden"
+              className="fixed inset-y-0 left-0 z-[101] flex flex-col w-72 max-w-[85vw]"
               style={{
-                background: 'var(--glass-bg)',
+                background: 'var(--glass-bg, hsl(0 0% 100%))',
                 borderRight: '1px solid var(--glass-border)',
                 backdropFilter: 'blur(24px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(24px) saturate(180%)',
@@ -133,7 +138,7 @@ export function MobileNav() {
               )}
 
               {/* Module list */}
-              <nav className="flex-1 overflow-y-auto py-4 px-3" aria-label="Modules">
+              <nav className="flex-1 min-h-0 overflow-y-auto py-4 px-3" aria-label="Modules">
                 <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
                   Modules
                 </p>

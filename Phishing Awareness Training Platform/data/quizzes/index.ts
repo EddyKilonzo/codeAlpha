@@ -232,6 +232,24 @@ export const QUIZZES: Record<string, Quiz> = {
         id: 'q-types-4',
         type: 'email-inspection',
         prompt: 'Inspect this email carefully and identify the three red flags that indicate it\'s a phishing attempt:',
+        emailContent: {
+          fromDisplay: 'Amazon',
+          fromAddr: 'delivery-update@amazon.com.parcel-track.net',
+          subject: 'Action Required: Your Amazon parcel could not be delivered',
+          date: 'Mon, 30 Jun 2026, 09:14',
+          body: {
+            greeting: 'Hello,',
+            orderNumber: 'AMZ-789-553-2024',
+            paragraphs: [
+              'We attempted to deliver your Amazon parcel (Order #AMZ-789-553-2024) on 30 June 2026, but were unable to complete the delivery as no one was available at the address.',
+              'Your parcel is currently held at our local distribution centre. You must collect it within 24 hours or it will be returned to the sender.',
+              'To reschedule your delivery or track your parcel, click the link below:',
+            ],
+            linkText: 'Track Your Parcel →',
+            linkUrl: 'https://track-parcel-delivery.net/AMZ-789-553-2024',
+            signoff: 'Amazon Delivery Team',
+          },
+        },
         options: [
           'The sender domain is "amazon.com.parcel-track.net" (not amazon.com)',
           'The email has the Amazon logo',
