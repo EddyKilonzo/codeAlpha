@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Menu, X, ShieldAlert, Fish, Crosshair, Zap, FileSearch, ShieldCheck,
@@ -11,6 +11,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useProgress } from '@/hooks/useProgress'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { MODULES } from '@/data/modules'
 import { getLevelFromXP, getLevelInfo } from '@/lib/levelUtils'
 import type { LucideIcon } from 'lucide-react'
@@ -23,9 +24,13 @@ export function MobileNav() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const { progress, isHydrated, isModuleUnlocked, isModuleCompleted } = useProgress()
+  const drawerRef = useRef<HTMLDivElement>(null)
 
   // Close on route change
   useEffect(() => { setOpen(false) }, [pathname])
+
+  // Keyboard accessibility: trap focus in the drawer, Esc closes, focus restored.
+  useFocusTrap(open, drawerRef, () => setOpen(false))
 
   // Lock main-content scroll while open (body doesn't scroll — #main-content does)
   useEffect(() => {
@@ -72,6 +77,7 @@ export function MobileNav() {
 
             {/* Drawer */}
             <motion.div
+              ref={drawerRef}
               role="dialog"
               aria-modal="true"
               aria-label="Navigation menu"

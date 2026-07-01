@@ -96,7 +96,7 @@ export function Header() {
         )}
 
         <motion.button
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors overflow-hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors overflow-hidden"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           whileTap={{ scale: 0.88 }}
           aria-label="Toggle dark mode"

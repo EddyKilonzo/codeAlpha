@@ -2,13 +2,15 @@
 
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle2, XCircle, ChevronRight, Check, X, Circle, AlertCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, ChevronRight, Check, X, Circle, AlertCircle, ChevronUp, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { HintSystem } from './HintSystem'
 import { QuizResults } from './QuizResults'
 import { useProgress } from '@/hooks/useProgress'
 import { XP_REWARDS, XP_PENALTIES, PASSING_SCORE } from '@/lib/constants'
+import { haptics } from '@/lib/haptics'
+import { computeScore, questionCredit } from '@/lib/quizScoring'
 import type { Quiz, Question, EmailContent } from '@/types'
 
 // ---------- individual question renderers ----------
@@ -560,19 +562,26 @@ function TimelineOrdering({
   const items = selected.length > 0 ? selected : (question.dragItems ?? [])
   const correct = Array.isArray(question.answer) ? question.answer : []
 
+  // Move an item between positions. Used by both drag (desktop) and the
+  // up/down buttons (touch-friendly — HTML5 drag doesn't work on mobile).
+  const move = (from: number, to: number) => {
+    if (submitted || to < 0 || to >= items.length || from === to) return
+    const updated = [...items]
+    const [moved] = updated.splice(from, 1)
+    updated.splice(to, 0, moved)
+    onReorder(updated)
+  }
+
   const handleDragStart = (i: number) => setDragIndex(i)
   const handleDrop = (i: number) => {
     if (dragIndex === null || dragIndex === i) return
-    const updated = [...items]
-    const [moved] = updated.splice(dragIndex, 1)
-    updated.splice(i, 0, moved)
-    onReorder(updated)
+    move(dragIndex, i)
     setDragIndex(null)
   }
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted-foreground mb-3">Drag to reorder into the correct sequence:</p>
+      <p className="text-xs text-muted-foreground mb-3">Put these in the correct order — use the arrows (or drag) to move each step:</p>
       {items.map((item, i) => {
         const correctIndex = correct.indexOf(item)
         const isCorrectPos = submitted && correctIndex === i
@@ -586,8 +595,8 @@ function TimelineOrdering({
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(i)}
             className={cn(
-              'flex items-center gap-3 rounded-xl border p-3.5 text-sm cursor-grab active:cursor-grabbing transition-all',
-              !submitted && 'border-border bg-card hover:border-brand/30 hover:bg-accent/20',
+              'flex items-center gap-2.5 rounded-xl border p-3 sm:p-3.5 text-sm transition-all',
+              !submitted && 'border-border bg-card hover:border-brand/30 hover:bg-accent/20 sm:cursor-grab sm:active:cursor-grabbing',
               isCorrectPos && 'border-brand/40 bg-brand/5',
               isWrongPos && 'border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-950/10',
             )}
@@ -599,9 +608,30 @@ function TimelineOrdering({
               {i + 1}
             </span>
             <span className="flex-1 text-xs leading-snug">{item}</span>
-            {!submitted && <span className="text-muted-foreground/40 text-xs">⠿</span>}
             {isCorrectPos && <CheckCircle2 className="h-4 w-4 text-brand shrink-0" />}
             {isWrongPos && <XCircle className="h-4 w-4 text-red-500 shrink-0" />}
+            {!submitted && (
+              <div className="flex shrink-0 flex-col">
+                <button
+                  type="button"
+                  onClick={() => move(i, i - 1)}
+                  disabled={i === 0}
+                  aria-label={`Move "${item}" up`}
+                  className="flex h-6 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-brand disabled:opacity-25 disabled:hover:bg-transparent active:scale-90"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(i, i + 1)}
+                  disabled={i === items.length - 1}
+                  aria-label={`Move "${item}" down`}
+                  className="flex h-6 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-brand disabled:opacity-25 disabled:hover:bg-transparent active:scale-90"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         )
       })}
@@ -645,6 +675,9 @@ interface QuizState {
     question: Question
     userAnswer: string | string[]
     correct: boolean
+    /** Fractional credit for this question: 1 = fully correct, 0 = wrong,
+        between = partially correct multi-answer question (got / total). */
+    credit: number
     hintsUsed: number
     xpDeducted: number
   }[]
@@ -767,30 +800,45 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
       const ua = Array.isArray(currentAnswer) ? currentAnswer : []
       feedbackPartial = { got: correctAnswers.filter(a => ua.includes(a)).length, total: correctAnswers.length }
     }
+
+    // Haptic feedback (mobile): firm buzz when wrong, soft when partial, subtle tick when right.
+    if (correct) {
+      haptics.success()
+    } else if (feedbackPartial && feedbackPartial.got > 0) {
+      haptics.warning()
+    } else {
+      haptics.error()
+    }
+
     setState((s) => ({ ...s, phase: 'feedback', feedbackCorrect: correct, feedbackPartial }))
   }
 
   const handleNext = () => {
     const correct = checkAnswer(question, currentAnswer)
     const deducted = state.xpDeducted[question.id] ?? 0
-    // Partial XP for multi-answer questions where the user got some (not all) correct
-    let xpForQuestion = correct ? 10 : 0
-    if (!correct && state.feedbackPartial && state.feedbackPartial.got > 0) {
-      xpForQuestion = Math.round((state.feedbackPartial.got / state.feedbackPartial.total) * 10)
-    }
+    // Fractional credit toward the overall score: fully correct = 1, a partially
+    // correct multi-answer question = got / total (e.g. 4 of 5 = 0.8), else 0.
+    const credit = questionCredit(
+      correct,
+      state.feedbackPartial?.got ?? 0,
+      state.feedbackPartial?.total ?? 0
+    )
+    // Partial XP mirrors that credit for multi-answer questions.
+    const xpForQuestion = Math.round(credit * 10)
 
     const resultItem = {
       question,
       userAnswer: normalizeAnswer(currentAnswer, question),
       correct,
+      credit,
       hintsUsed: state.hintsUsed[question.id] ?? 0,
       xpDeducted: deducted,
     }
 
     if (isLast) {
       const allResults = [...state.resultItems, resultItem]
-      const correctCount = allResults.filter((r) => r.correct).length
-      const score = Math.round((correctCount / cappedQuiz.questions.length) * 100)
+      // Fractional-credit average, 2dp (e.g. 87.89%).
+      const score = computeScore(allResults)
       const passed = score >= PASSING_SCORE
       const baseXP = passed ? XP_REWARDS.QUIZ_PASS : 0
       const perfectBonus = score === 100 ? XP_REWARDS.QUIZ_PERFECT_BONUS : 0

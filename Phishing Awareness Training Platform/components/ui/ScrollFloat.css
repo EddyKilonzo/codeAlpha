@@ -1,0 +1,30 @@
+.scroll-float {
+  overflow: hidden;
+  display: inline-block;
+}
+
+.scroll-float-text {
+  display: inline-block;
+  /* Inherit the heading's own responsive size/weight so the animation
+     blends into the existing landing-page typography. */
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  /* Extra room so descenders aren't clipped by overflow: hidden, pulled
+     back with a matching negative margin so layout is unaffected. */
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+
+/* Keep every word intact — line breaks may only happen at the spaces between
+   words, never between characters. This prevents jumbled mid-word wrapping on
+   narrow/mobile screens while each .char still animates individually. */
+.word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.char {
+  display: inline-block;
+}

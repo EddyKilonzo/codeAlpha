@@ -58,6 +58,13 @@ function safePositiveInt(v: unknown, max = Infinity): number {
   return Math.min(Math.floor(v), max)
 }
 
+// Like safePositiveInt but keeps up to 2 decimals — quiz scores can be
+// fractional thanks to partial credit on multi-answer questions (e.g. 87.89).
+function safeScore(v: unknown, max = 100): number {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) return 0
+  return Math.min(Math.round(v * 100) / 100, max)
+}
+
 function safeModuleIdArray(v: unknown): string[] {
   if (!Array.isArray(v)) return []
   return [...new Set(v.filter((id): id is string => typeof id === 'string' && VALID_MODULE_IDS.has(id)))]
@@ -70,7 +77,7 @@ function safeQuizScores(v: unknown): Record<string, QuizScore> {
     if (!VALID_MODULE_IDS.has(key)) continue
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue
     const entry = raw as Record<string, unknown>
-    const score = safePositiveInt(entry.score, 100)
+    const score = safeScore(entry.score, 100)
     const attempts = safePositiveInt(entry.attempts, 9999)
     const xpEarned = safePositiveInt(entry.xpEarned, 9999)
     // Always recompute from score so threshold changes apply to existing data

@@ -6,6 +6,8 @@ import { Trophy, XCircle, RotateCcw, ChevronRight, Star, Check, X, AlertCircle }
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PASSING_SCORE } from '@/lib/constants'
+import { haptics } from '@/lib/haptics'
+import { computeScore } from '@/lib/quizScoring'
 import { useCountUp } from '@/hooks/useCountUp'
 import type { Question } from '@/types'
 
@@ -13,6 +15,8 @@ interface ResultItem {
   question: Question
   userAnswer: string | string[]
   correct: boolean
+  /** Fractional credit toward the score (1 = full, 0 = none, between = partial). */
+  credit?: number
   hintsUsed: number
   xpDeducted: number
 }
@@ -28,18 +32,24 @@ interface Props {
 export function QuizResults({ results, totalXP, moduleId, onRetry, onContinue }: Props) {
   const correct = results.filter((r) => r.correct).length
   const total = results.length
-  const score = Math.round((correct / total) * 100)
+  // Score uses fractional credit so partially-correct multi-answer questions
+  // count proportionally (e.g. 4 of 5 = 0.8) instead of as a zero.
+  const score = computeScore(results)
   const passed = score >= PASSING_SCORE
+  const scoreHasDecimals = !Number.isInteger(score)
 
   // Animated count-ups — start at 0 and count to final values
-  const animatedScore = useCountUp(score, 900)
+  const animatedScore = useCountUp(score, 900, true, scoreHasDecimals ? 2 : 0)
   const animatedXP = useCountUp(totalXP, 1100)
 
   useEffect(() => {
     if (passed) {
+      haptics.success()
       import('canvas-confetti').then(({ default: confetti }) => {
         confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 }, colors: ['#16a34a', '#22c55e', '#4ade80'] })
       })
+    } else {
+      haptics.error()
     }
   }, [passed])
 
@@ -96,7 +106,7 @@ export function QuizResults({ results, totalXP, moduleId, onRetry, onContinue }:
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              {animatedScore}%
+              {scoreHasDecimals ? animatedScore.toFixed(2) : animatedScore}%
             </motion.h2>
             <p className={cn('text-lg font-semibold mt-1', passed ? 'text-brand' : 'text-red-500')}>
               {passed ? 'Quiz Passed!' : 'Not Passed Yet'}

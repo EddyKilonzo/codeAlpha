@@ -15,6 +15,13 @@ const CertificateTemplate = dynamic(
   { ssr: false }
 )
 import { cn } from '@/lib/utils'
+import TrueFocus from '@/components/ui/TrueFocus'
+import ScrollFloat from '@/components/ui/ScrollFloat'
+import BorderGlow from '@/components/ui/BorderGlow'
+import { SiteFooter } from '@/components/layout/SiteFooter'
+// Decorative WebGL/gsap hero background — loaded lazily on the client so gsap
+// stays out of the initial landing bundle and never blocks first paint.
+const GridMotion = dynamic(() => import('@/components/ui/GridMotion'), { ssr: false })
 
 // ─── Floating icon positions — parallax only, no bounce ──────────────────────
 const FLOATING_ICONS = [
@@ -83,8 +90,8 @@ function FloatingIcon({
       transition={{ delay: delay + 0.7, duration: 0.6, type: 'spring', stiffness: 180, damping: 16 }}
     >
       <div
-        className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white border border-black/[0.08]"
-        style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.05)' }}
+        className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white border border-brand/30"
+        style={{ boxShadow: '0 2px 12px rgba(22,163,74,0.10), 0 1px 3px rgba(0,0,0,0.05)' }}
       >
         <Icon style={{ width: 19, height: 19, color: 'rgba(0,0,0,0.35)' }} />
       </div>
@@ -238,14 +245,14 @@ function FeaturesSection() {
         <motion.div
           initial={{ opacity: 0, y: 22 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
+          viewport={{ once: false, margin: '-60px' }}
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand mb-4">What You Get</p>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight leading-[1.08]">
-            Everything you need to<br />
-            <span className="text-muted-foreground/40">stay safe online.</span>
+            <ScrollFloat tag="span">Everything you need to</ScrollFloat><br />
+            <span className="text-muted-foreground/70">stay safe online.</span>
           </h2>
         </motion.div>
 
@@ -255,7 +262,7 @@ function FeaturesSection() {
               key={title}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-40px' }}
+              viewport={{ once: false, margin: '-40px' }}
               transition={{ delay: i * 0.09, duration: 0.5 }}
               className="group relative overflow-hidden rounded-2xl border border-black/[0.07] bg-white p-6 transition-all duration-300 hover:border-brand/30 shadow-premium"
             >
@@ -280,14 +287,17 @@ function ModulesSection() {
         <motion.div
           initial={{ opacity: 0, y: 22 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
+          viewport={{ once: false, margin: '-60px' }}
           transition={{ duration: 0.6 }}
           className="text-center mb-14"
         >
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand mb-4">The Course</p>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight leading-[1.08]">
+          <ScrollFloat
+            tag="h2"
+            containerClassName="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight leading-[1.08]"
+          >
             6 modules. Start to finish.
-          </h2>
+          </ScrollFloat>
           <p className="mt-4 text-muted-foreground text-[15px] max-w-md mx-auto leading-relaxed">
             Progress from the basics to hands-on defence skills at your own pace.
           </p>
@@ -299,23 +309,38 @@ function ModulesSection() {
               key={id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-30px' }}
+              viewport={{ once: false, margin: '-30px' }}
               transition={{ delay: i * 0.07, duration: 0.45 }}
-              className="group flex items-center gap-4 rounded-2xl border border-black/[0.07] bg-white p-4 transition-all duration-200 hover:border-brand/25 shadow-premium-sm"
+              className="group h-full"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/[0.08] border border-brand/20">
-                <Icon className="h-5 w-5 text-brand" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-foreground truncate">{title}</p>
-                <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{mins} min</span>
-                  <span className="flex items-center gap-1 text-brand font-semibold"><Star className="h-3 w-3" />+{xp} XP</span>
+              <BorderGlow
+                className="h-full"
+                edgeSensitivity={35}
+                glowColor="142 72 45"
+                backgroundColor="#ffffff"
+                borderColor="rgb(0 0 0 / 7%)"
+                borderRadius={16}
+                glowRadius={22}
+                glowIntensity={0.9}
+                coneSpread={22}
+                colors={['#22c55e', '#16a34a', '#4ade80']}
+              >
+                <div className="flex h-full items-center gap-4 p-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/[0.08] border border-brand/20">
+                    <Icon className="h-5 w-5 text-brand" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-foreground truncate">{title}</p>
+                    <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground">
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{mins} min</span>
+                      <span className="flex items-center gap-1 text-brand font-semibold"><Star className="h-3 w-3" />+{xp} XP</span>
+                    </div>
+                  </div>
+                  <div className="text-[11px] font-bold text-black/10 group-hover:text-brand/40 transition-colors tabular-nums">
+                    {String(i + 1).padStart(2, '0')}
+                  </div>
                 </div>
-              </div>
-              <div className="text-[11px] font-bold text-black/10 group-hover:text-brand/40 transition-colors tabular-nums">
-                {String(i + 1).padStart(2, '0')}
-              </div>
+              </BorderGlow>
             </motion.div>
           ))}
         </div>
@@ -323,7 +348,7 @@ function ModulesSection() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false }}
           transition={{ delay: 0.4, duration: 0.5 }}
           className="text-center mt-12"
         >
@@ -374,14 +399,14 @@ function CertificateSection() {
         <motion.div
           initial={{ opacity: 0, y: 22 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
+          viewport={{ once: false, margin: '-60px' }}
           transition={{ duration: 0.6 }}
           className="text-center mb-14"
         >
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand mb-4">Your Achievement</p>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight leading-[1.08]">
-            Finish the course,<br />
-            <span className="text-muted-foreground/40">earn your certificate.</span>
+            <ScrollFloat tag="span">Finish the course,</ScrollFloat><br />
+            <span className="text-muted-foreground/70">earn your certificate.</span>
           </h2>
           <p className="mt-4 text-muted-foreground text-[15px] max-w-md mx-auto leading-relaxed">
             Complete all 6 modules and pass all assessments to receive a professionally designed PDF certificate — downloadable, printable, and shareable.
@@ -392,7 +417,7 @@ function CertificateSection() {
         <motion.div
           initial={{ opacity: 0, y: 32, scale: 0.97 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: true, margin: '-40px' }}
+          viewport={{ once: false, margin: '-40px' }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="relative mx-auto"
           style={{ width: `${scaledWidth}px` }}
@@ -423,7 +448,7 @@ function CertificateSection() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false }}
           transition={{ delay: 0.3, duration: 0.5 }}
           className="text-center mt-12"
         >
@@ -475,6 +500,20 @@ export function LandingPage() {
           {/* Layered brand glow — two overlapping radials for depth */}
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[1100px] h-[700px] bg-[radial-gradient(ellipse,rgba(22,163,74,0.13)_0%,transparent_62%)]" />
           <div className="absolute top-1/3 left-1/3 w-[600px] h-[500px] bg-[radial-gradient(ellipse,rgba(22,163,74,0.06)_0%,transparent_70%)] blur-3xl" />
+          {/* GridMotion — subtle ambient brand-green grid drifting behind the content */}
+          <div
+            className="absolute inset-0 opacity-[0.5]"
+            style={{
+              maskImage: 'radial-gradient(ellipse at 50% 42%, black 0%, transparent 72%)',
+              WebkitMaskImage: 'radial-gradient(ellipse at 50% 42%, black 0%, transparent 72%)',
+            }}
+          >
+            <GridMotion
+              gradientColor="rgba(22,163,74,0.10)"
+              itemBackground="rgba(22,163,74,0.08)"
+              items={Array.from({ length: 28 }, () => '')}
+            />
+          </div>
           {/* Edge vignette — draws the eye to center */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_50%,rgba(245,247,250,0.5)_100%)]" />
           {/* Fade bottom into next section */}
@@ -510,11 +549,15 @@ export function LandingPage() {
           >
             Learn to Spot It.
             <br />
-            <span
-              className="bg-clip-text text-transparent"
-              style={{ backgroundImage: 'linear-gradient(135deg, #15803d 0%, #16a34a 45%, #22c55e 100%)' }}
-            >
-              Stop the Attack.
+            <span className="block mt-1 text-brand">
+              <TrueFocus
+                sentence="Stop the Attack."
+                borderColor="#16a34a"
+                glowColor="rgba(34,197,94,0.55)"
+                blurAmount={5}
+                animationDuration={0.5}
+                pauseBetweenAnimations={1}
+              />
             </span>
           </motion.h1>
 
@@ -599,40 +642,7 @@ export function LandingPage() {
       <CertificateSection />
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-black/[0.06] py-16 px-4 bg-[#f5f7fa]">
-        <div className="mx-auto max-w-5xl">
-          {/* Footer CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-between gap-6 rounded-2xl border border-brand/20 bg-white px-7 py-6 mb-12 shadow-premium"
-          >
-            <div className="text-center sm:text-left">
-              <p className="text-[15px] font-bold text-foreground">Ready to get started?</p>
-              <p className="text-[13px] text-muted-foreground mt-0.5">Free training — no account needed. Begin right now.</p>
-            </div>
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 rounded-xl border border-brand text-brand px-6 py-3 text-[14px] font-bold hover:bg-brand/[0.07] transition-colors shrink-0"
-            >
-              Start Training <ArrowRight className="h-4 w-4" />
-            </Link>
-          </motion.div>
-
-          {/* Brand */}
-          <div className="flex items-center justify-center gap-2.5 mb-3">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md overflow-hidden bg-white border border-black/[0.08]">
-              <Image src="/logo.png" alt="PhishShield" width={24} height={24} className="object-contain" />
-            </div>
-            <span className="text-[14px] font-extrabold text-foreground/40 tracking-tight">PhishShield</span>
-          </div>
-          <p className={cn('text-center text-[12px] text-muted-foreground/60')}>
-            © {new Date().getFullYear()} PhishShield — Security Awareness Training Platform
-          </p>
-        </div>
-      </footer>
+      <SiteFooter showCta />
     </div>
   )
 }

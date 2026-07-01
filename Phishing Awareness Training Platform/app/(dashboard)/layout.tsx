@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/Header'
 import { NotificationManager } from '@/components/gamification/NotificationManager'
 import { PageTransition } from '@/components/layout/PageTransition'
 import { AppLoader } from '@/components/loading/AppLoader'
+import { SiteFooter } from '@/components/layout/SiteFooter'
 
 export default function DashboardLayout({
   children,
@@ -19,10 +20,13 @@ export default function DashboardLayout({
       {/* Main content area */}
       <div className="flex flex-col flex-1 lg:pl-64 min-w-0">
         <Header />
-        <main id="main-content" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-          <PageTransition>
-            {children}
-          </PageTransition>
+        <main id="main-content" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col">
+          <div className="flex-1">
+            <PageTransition>
+              {children}
+            </PageTransition>
+          </div>
+          <SiteFooter />
         </main>
       </div>
 

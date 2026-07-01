@@ -246,10 +246,11 @@ export function VoiceSummaryPlayer({ moduleId, phase, onComplete }: Props) {
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-between">
+        {/* Controls — wrap on narrow screens so the speed selector never
+            overflows the card edge */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 sm:justify-between">
           {/* Left: volume icon + slider */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
             <motion.button
               type="button"
               onClick={speech.toggleMute}
@@ -325,7 +326,7 @@ export function VoiceSummaryPlayer({ moduleId, phase, onComplete }: Props) {
           </div>
 
           {/* Right: speed selector */}
-          <div className="flex items-center gap-0.5">
+          <div className="flex shrink-0 items-center gap-0.5">
             {SPEECH_RATES.map((r) => (
               <motion.button
                 key={r}

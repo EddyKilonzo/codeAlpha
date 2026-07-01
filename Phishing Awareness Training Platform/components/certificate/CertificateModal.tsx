@@ -7,6 +7,7 @@ import { X, Download, Printer, User, ShieldCheck, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sanitizeName, sanitizeFilename } from '@/lib/sanitize'
 import { useProgress } from '@/hooks/useProgress'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { CertificateTemplate, drawHexGrid, drawWaveStrip, type CertificateData } from './CertificateTemplate'
 
 // ── Confetti celebration ───────────────────────────────────────────────────
@@ -106,6 +107,10 @@ export function CertificateModal({ open, onClose }: Props) {
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const [showConfetti, setShowConfetti] = useState(!progress.userName)
   const certRef = useRef<HTMLDivElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  // Keyboard accessibility: trap focus inside the dialog, Esc closes, focus restored.
+  useFocusTrap(open, dialogRef, onClose)
 
   // Show confetti once when certificate step is first revealed
   useEffect(() => {
@@ -285,6 +290,7 @@ export function CertificateModal({ open, onClose }: Props) {
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div
+            ref={dialogRef}
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -310,7 +316,7 @@ export function CertificateModal({ open, onClose }: Props) {
               <button
                 onClick={onClose}
                 aria-label="Close certificate modal"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -364,7 +370,8 @@ export function CertificateModal({ open, onClose }: Props) {
                             },
                           })}
                           className={cn(
-                            'w-full rounded-xl border bg-background pl-10 pr-4 py-3 text-sm outline-none transition-all',
+                            // 16px text prevents iOS Safari from auto-zooming on focus
+                            'w-full rounded-xl border bg-background pl-10 pr-4 py-3 text-base sm:text-sm outline-none transition-all',
                             'focus:border-brand focus:ring-2 focus:ring-brand/20',
                             errors.fullName ? 'border-red-400' : 'border-border'
                           )}

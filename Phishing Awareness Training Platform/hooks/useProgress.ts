@@ -2,6 +2,8 @@
 
 import { useCallback } from 'react'
 import { useProgressContext } from '@/context/ProgressContext'
+import { migrateProgress } from '@/lib/progressUtils'
+import { STORAGE_KEY } from '@/lib/constants'
 import type { QuizScore } from '@/types'
 
 export function useProgress() {
@@ -96,6 +98,40 @@ export function useProgress() {
   const overallProgress = useCallback(() =>
     Math.round((state.completedModules.length / 6) * 100), [state.completedModules])
 
+  // Download the current progress (incl. certificate name/id) as a JSON backup —
+  // guards against losing everything when the browser cache/localStorage is cleared.
+  const exportProgress = useCallback((): { ok: boolean; error?: string } => {
+    try {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `phishshield-progress-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      return { ok: true }
+    } catch {
+      return { ok: false, error: 'Could not export your progress.' }
+    }
+  }, [state])
+
+  // Restore from a backup file. We sanitise via migrateProgress, write straight to
+  // storage and reload so hydration re-runs cleanly (no achievement toast storm).
+  const importProgress = useCallback((json: string): { ok: boolean; error?: string } => {
+    try {
+      const parsed = JSON.parse(json)
+      if (!parsed || typeof parsed !== 'object') throw new Error('bad')
+      const migrated = migrateProgress(parsed)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+      window.location.reload()
+      return { ok: true }
+    } catch {
+      return { ok: false, error: 'That file isn’t a valid PhishShield backup.' }
+    }
+  }, [])
+
   return {
     progress: state,
     isHydrated,
@@ -123,5 +159,7 @@ export function useProgress() {
     getQuizScore,
     isAchievementUnlocked,
     overallProgress,
+    exportProgress,
+    importProgress,
   }
 }

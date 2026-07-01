@@ -284,6 +284,10 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [isHydrated, setIsHydrated] = useState(false)
   const [pendingNotifications, setPendingNotifications] = useState<GamificationNotification[]>([])
   const prevStateRef = useRef<UserProgress>(DEFAULT_PROGRESS)
+  // Whether we've established the post-hydration baseline. Until we have, the
+  // (default → saved-progress) transition must NOT emit notifications, otherwise
+  // every already-earned achievement/level/module re-toasts on each page load.
+  const notifBaselineSetRef = useRef(false)
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -314,10 +318,16 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   // Diff state after each change to detect new achievements, level-ups, module completions
   useEffect(() => {
-    if (!isHydrated) {
+    if (!isHydrated) return
+
+    // First run after hydration: record the loaded progress as the baseline and
+    // emit nothing — historical achievements/levels/modules are already "seen".
+    if (!notifBaselineSetRef.current) {
+      notifBaselineSetRef.current = true
       prevStateRef.current = state
       return
     }
+
     const prev = prevStateRef.current
     const notifications: GamificationNotification[] = []
 

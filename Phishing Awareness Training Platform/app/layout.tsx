@@ -1,14 +1,18 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Providers } from '@/context/Providers'
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from '@/lib/site'
 import './globals.css'
 
+// Geist ships as a single variable font — loading it that way (no explicit
+// weight list) delivers every weight, including 900 (font-black), in one file.
 const geistSans = Geist({
   subsets: ['latin'],
   variable: '--font-geist-sans',
   display: 'swap',
   preload: true,
-  weight: ['400', '500', '600', '700', '800'],
 })
 
 const geistMono = Geist_Mono({
@@ -16,21 +20,44 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   display: 'swap',
   preload: false,
-  weight: ['400', '500', '700'],
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'PhishShield — Phishing Awareness Training',
     template: '%s | PhishShield',
   },
-  description:
-    'Interactive cybersecurity awareness training platform. Learn to identify, avoid, and report phishing attacks through gamified modules, simulations, and quizzes.',
-  keywords: ['phishing', 'cybersecurity', 'awareness training', 'security'],
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: ['phishing', 'cybersecurity', 'awareness training', 'security', 'phishing training', 'security awareness'],
+  authors: [{ name: 'Eddy Max Kilonzo', url: 'https://eddy-max.vercel.app/' }],
+  creator: 'Eddy Max Kilonzo',
+  manifest: '/manifest.webmanifest',
   icons: {
     icon: '/logo.png',
-    apple: '/logo.png',
+    apple: '/apple-icon.png',
   },
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    title: 'PhishShield — Phishing Awareness Training',
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    locale: 'en_US',
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'PhishShield — Learn to Spot It. Stop the Attack.' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PhishShield — Phishing Awareness Training',
+    description: SITE_DESCRIPTION,
+    images: ['/og.png'],
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#16a34a',
+  colorScheme: 'light',
 }
 
 export default function RootLayout({
@@ -49,6 +76,8 @@ export default function RootLayout({
           Skip to main content
         </a>
         <Providers>{children}</Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )

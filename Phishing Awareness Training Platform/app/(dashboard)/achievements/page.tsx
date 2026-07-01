@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useProgress } from '@/hooks/useProgress'
+import { ProgressBackup } from '@/components/settings/ProgressBackup'
 import { ACHIEVEMENTS } from '@/data/achievements'
 import type { Achievement } from '@/types'
 
@@ -228,6 +229,9 @@ export default function AchievementsPage() {
           </div>
         </section>
       ))}
+
+      {/* Data backup / restore */}
+      <ProgressBackup />
     </div>
   )
 }
