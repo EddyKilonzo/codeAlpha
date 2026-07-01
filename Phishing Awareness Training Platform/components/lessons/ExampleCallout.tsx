@@ -9,8 +9,8 @@ interface Props {
 
 export function ExampleCallout({ card }: Props) {
   return (
-    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-      <div className="p-5 border-b border-border flex items-start gap-3">
+    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-border flex items-start gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30 shrink-0">
           <Lightbulb className="h-4 w-4 text-violet-600 dark:text-violet-400" />
         </div>
@@ -20,7 +20,7 @@ export function ExampleCallout({ card }: Props) {
         </div>
       </div>
 
-      <div className="p-5 space-y-4">
+      <div className="p-6 space-y-4">
         <p className="text-sm text-foreground/90 leading-relaxed">{card.detail}</p>
 
         {card.example && (

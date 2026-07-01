@@ -14,10 +14,10 @@ export function WarningCard({ card }: Props) {
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/10 shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/10 shadow-sm overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-start gap-4 p-5 text-left group"
+        className="w-full flex items-start gap-4 p-6 text-left group"
         aria-expanded={open}
       >
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40 mt-0.5">
@@ -45,7 +45,7 @@ export function WarningCard({ card }: Props) {
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 border-t border-amber-200 dark:border-amber-800/40 pt-4 space-y-4">
+            <div className="px-6 pb-6 border-t border-amber-200 dark:border-amber-800/40 pt-5 space-y-4">
               <p className="text-sm text-foreground leading-relaxed">{card.detail}</p>
 
               {card.items && (

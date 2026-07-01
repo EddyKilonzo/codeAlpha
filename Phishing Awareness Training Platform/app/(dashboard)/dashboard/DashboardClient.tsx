@@ -39,7 +39,7 @@ function DashboardSkeleton() {
       {/* Stats skeleton */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-border bg-card p-4 space-y-2">
+          <div key={i} className="rounded-2xl border border-border bg-card p-5 space-y-2">
             <div className="h-4 w-16 rounded bg-muted skeleton" />
             <div className="h-8 w-20 rounded-lg bg-muted skeleton" />
           </div>
@@ -49,9 +49,9 @@ function DashboardSkeleton() {
       <div className="space-y-3">
         <div className="h-4 w-20 rounded bg-muted skeleton" />
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl border border-border bg-card overflow-hidden">
+          <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden">
             <div className="h-0.5 w-full bg-muted" />
-            <div className="flex items-center gap-4 p-4">
+            <div className="flex items-center gap-4 p-5">
               <div className="h-12 w-12 rounded-xl bg-muted skeleton shrink-0" />
               <div className="flex-1 space-y-2">
                 <div className="h-4 w-40 rounded bg-muted skeleton" />
@@ -130,7 +130,7 @@ export function DashboardClient() {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-brand/25 bg-brand/5 px-4 py-3 flex flex-wrap items-center gap-3 shadow-premium-sm"
+          className="rounded-2xl border border-brand/25 bg-brand/5 px-5 py-4 flex flex-wrap items-center gap-3 shadow-premium-sm"
         >
           <PlayCircle className="h-5 w-5 text-brand shrink-0" />
           <div className="flex-1 min-w-0">
@@ -149,7 +149,7 @@ export function DashboardClient() {
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {/* XP */}
-        <div className="card-lift rounded-xl border border-border bg-card p-4 space-y-1 shadow-premium-sm">
+        <div className="card-lift rounded-2xl border border-border bg-card p-5 space-y-1 shadow-premium-sm">
           <div className="flex items-center gap-2">
             <Star className="h-4 w-4 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">Total XP</span>
@@ -159,7 +159,7 @@ export function DashboardClient() {
         </div>
 
         {/* Level */}
-        <div className="card-lift rounded-xl border border-border bg-card p-4 space-y-1 shadow-premium-sm">
+        <div className="card-lift rounded-2xl border border-border bg-card p-5 space-y-1 shadow-premium-sm">
           <div className="flex items-center gap-2">
             <Trophy className="h-4 w-4 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">Level</span>
@@ -169,7 +169,7 @@ export function DashboardClient() {
         </div>
 
         {/* Streak */}
-        <div className="card-lift rounded-xl border border-border bg-card p-4 space-y-1 shadow-premium-sm">
+        <div className="card-lift rounded-2xl border border-border bg-card p-5 space-y-1 shadow-premium-sm">
           <div className="flex items-center gap-2">
             <Flame className="h-4 w-4 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">Streak</span>
@@ -181,7 +181,7 @@ export function DashboardClient() {
         </div>
 
         {/* Modules */}
-        <div className="card-lift rounded-xl border border-border bg-card p-4 space-y-1 shadow-premium-sm">
+        <div className="card-lift rounded-2xl border border-border bg-card p-5 space-y-1 shadow-premium-sm">
           <div className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-brand" />
             <span className="text-xs font-medium text-muted-foreground">Modules</span>
@@ -195,7 +195,7 @@ export function DashboardClient() {
 
       {/* Overall progress */}
       {completedCount > 0 && (
-        <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 space-y-3 shadow-premium-sm">
+        <div className="rounded-2xl border border-brand/20 bg-brand/5 p-5 space-y-3 shadow-premium-sm">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-foreground">Overall Progress</span>
             <span className="text-sm font-bold text-brand">{overallPct}%</span>
@@ -236,7 +236,7 @@ export function DashboardClient() {
                 {isUnlocked ? (
                   <Link href={`/modules/${mod.id}`}>
                     <div className={cn(
-                      'group relative rounded-xl border card-lift overflow-hidden cursor-pointer shadow-premium-sm',
+                      'group relative rounded-2xl border card-lift overflow-hidden cursor-pointer shadow-premium-sm',
                       isNext && 'border-brand/40',
                       isCompleted && 'border-brand/20',
                       !isNext && !isCompleted && 'border-border',
@@ -256,7 +256,7 @@ export function DashboardClient() {
                         isCompleted || isNext ? 'bg-brand' : 'bg-muted'
                       )} />
 
-                      <div className="flex items-center gap-4 p-4 bg-card">
+                      <div className="flex items-center gap-4 p-5 bg-card">
                         {/* Module icon — monochromatic */}
                         <div className={cn(
                           'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border overflow-hidden',
@@ -335,9 +335,9 @@ export function DashboardClient() {
                     </div>
                   </Link>
                 ) : (
-                  <div className="rounded-xl border border-border/60 overflow-hidden opacity-50">
+                  <div className="rounded-2xl border border-border/60 overflow-hidden opacity-50">
                     <div className="h-0.5 w-full bg-muted" />
-                    <div className="flex items-center gap-4 p-4 bg-card">
+                    <div className="flex items-center gap-4 p-5 bg-card">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted border border-border">
                         <Lock className="h-5 w-5 text-muted-foreground" />
                       </div>
@@ -367,7 +367,7 @@ export function DashboardClient() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-brand/30 bg-brand/5 p-6 text-center space-y-3 shadow-premium-sm"
+          className="rounded-2xl border border-brand/30 bg-brand/5 p-6 text-center space-y-3 shadow-premium-sm"
         >
           <Trophy className="h-10 w-10 text-brand mx-auto" />
           <div>

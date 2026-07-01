@@ -351,7 +351,7 @@ export function ModulePageClient({ module }: Props) {
                     <LessonSection key={(section as { id: string }).id} section={section} index={i} />
                   ))}
                   {content?.takeaways && content.takeaways.length > 0 && (
-                    <div className="rounded-xl border border-brand/20 bg-brand/5 p-5 space-y-3 shadow-premium">
+                    <div className="rounded-2xl border border-brand/20 bg-brand/5 p-6 space-y-3 shadow-premium">
                       <h3 className="text-sm font-bold text-brand uppercase tracking-wider">Key Takeaways</h3>
                       <ul className="space-y-2">
                         {content.takeaways.map((t, i) => (

@@ -14,11 +14,11 @@ export function RevealCard({ card }: Props) {
   const [revealed, setRevealed] = useState(false)
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+    <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
       {/* Header */}
       <button
         onClick={() => setRevealed((v) => !v)}
-        className="w-full flex items-start gap-4 p-5 text-left group hover:bg-accent/50 transition-colors"
+        className="w-full flex items-start gap-4 p-6 text-left group hover:bg-accent/50 transition-colors"
         aria-expanded={revealed}
       >
         <div className={cn(
@@ -47,7 +47,7 @@ export function RevealCard({ card }: Props) {
             transition={{ duration: 0.25, ease: 'easeOut' }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 border-t border-border pt-4 space-y-3">
+            <div className="px-6 pb-6 border-t border-border pt-5 space-y-3">
               <p className="text-sm text-foreground leading-relaxed">{card.detail}</p>
 
               {card.example && (

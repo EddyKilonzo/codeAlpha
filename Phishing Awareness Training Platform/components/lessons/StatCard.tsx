@@ -10,8 +10,8 @@ interface Props {
 
 export function StatCard({ card }: Props) {
   return (
-    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-      <div className="p-5 border-b border-border flex items-start gap-3">
+    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-border flex items-start gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10 shrink-0">
           <TrendingUp className="h-4 w-4 text-brand" />
         </div>
@@ -22,13 +22,13 @@ export function StatCard({ card }: Props) {
       </div>
 
       {card.detail && (
-        <div className="px-5 pt-4 pb-2">
+        <div className="px-6 pt-5 pb-2">
           <p className="text-sm text-foreground/90 leading-relaxed">{card.detail}</p>
         </div>
       )}
 
       {card.items && card.items.length > 0 && (
-        <div className="px-5 pb-5 pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="px-6 pb-6 pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
           {card.items.map((item, i) => (
             <motion.div
               key={i}
@@ -46,7 +46,7 @@ export function StatCard({ card }: Props) {
       )}
 
       {card.source && (
-        <div className="px-5 pb-4">
+        <div className="px-6 pb-5">
           <p className="text-xs text-muted-foreground">Source: {card.source}</p>
         </div>
       )}

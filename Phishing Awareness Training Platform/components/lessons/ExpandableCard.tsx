@@ -34,12 +34,12 @@ export function ExpandableCard({ card }: Props) {
 
   return (
     <div className={cn(
-      'rounded-xl border overflow-hidden shadow-sm transition-colors duration-200',
+      'rounded-2xl border overflow-hidden shadow-sm transition-colors duration-200',
       open ? 'border-brand/40 bg-card' : 'border-border bg-card'
     )}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-start gap-4 p-5 text-left group"
+        className="w-full flex items-start gap-4 p-6 text-left group"
         aria-expanded={open}
       >
         <div className={cn(
@@ -65,7 +65,7 @@ export function ExpandableCard({ card }: Props) {
             transition={{ duration: 0.22, ease: 'easeOut' }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 border-t border-border/60 pt-4 space-y-4">
+            <div className="px-6 pb-6 border-t border-border/60 pt-5 space-y-4">
               <p className="text-sm text-foreground leading-relaxed">{card.detail}</p>
 
               {card.items && card.items.length > 0 && (
