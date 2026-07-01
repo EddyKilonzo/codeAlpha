@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle2, XCircle, ChevronRight, Check, X, Circle } from 'lucide-react'
+import { CheckCircle2, XCircle, ChevronRight, Check, X, Circle, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { HintSystem } from './HintSystem'
@@ -222,7 +222,12 @@ function MultipleSelect({
       {question.options?.map((opt, i) => {
         const isSelected = selected.includes(opt)
         const isCorrect = correctAnswers.includes(opt)
-        const showState = submitted
+
+        // Four distinct post-submit states
+        const gotRight   = submitted && isSelected && isCorrect
+        const missed     = submitted && !isSelected && isCorrect
+        const wrongPick  = submitted && isSelected && !isCorrect
+        const irrelevant = submitted && !isSelected && !isCorrect
 
         return (
           <motion.button
@@ -236,27 +241,43 @@ function MultipleSelect({
             whileTap={!submitted ? { scale: 0.98, transition: { duration: 0.08 } } : {}}
             className={cn(
               'w-full flex items-center gap-3 rounded-xl border p-4 text-left text-sm transition-colors',
-              !showState && !isSelected && 'border-border bg-card hover:bg-accent/40',
-              !showState && isSelected && 'border-brand/50 bg-brand/10',
-              showState && isCorrect && 'border-brand bg-brand/10',
-              showState && isSelected && !isCorrect && 'border-red-400 bg-red-50 dark:bg-red-950/20',
+              !submitted && !isSelected && 'border-border bg-card hover:bg-accent/40',
+              !submitted && isSelected  && 'border-brand/50 bg-brand/10',
+              gotRight   && 'border-brand bg-brand/10',
+              missed     && 'border-amber-400/60 bg-amber-50/50 dark:bg-amber-950/20',
+              wrongPick  && 'border-red-400 bg-red-50 dark:bg-red-950/20',
+              irrelevant && 'border-border/30 bg-card opacity-40',
             )}
           >
             <motion.span
               className={cn(
                 'flex h-5 w-5 shrink-0 items-center justify-center rounded border',
-                showState && isCorrect ? 'bg-brand border-brand text-white' : isSelected ? 'bg-brand border-brand text-white' : 'border-muted-foreground/40',
+                !submitted && isSelected  && 'bg-brand border-brand text-white',
+                !submitted && !isSelected && 'border-muted-foreground/40',
+                gotRight  && 'bg-brand border-brand text-white',
+                missed    && 'bg-amber-100 border-amber-400 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
+                wrongPick && 'bg-red-500 border-red-500 text-white',
               )}
-              animate={showState && isCorrect ? { scale: [1, 1.3, 1] } : {}}
+              animate={gotRight ? { scale: [1, 1.3, 1] } : {}}
               transition={{ duration: 0.3, delay: 0.1 }}
             >
-              {(isSelected || (showState && isCorrect)) && <Check className="h-3 w-3" />}
+              {(!submitted && isSelected) && <Check className="h-3 w-3" />}
+              {gotRight  && <Check className="h-3 w-3" />}
+              {missed    && <Check className="h-3 w-3" />}
+              {wrongPick && <X className="h-3 w-3" />}
             </motion.span>
             <span className={cn(
-              showState && isCorrect ? 'text-brand font-medium' : 'text-foreground'
+              'flex-1 text-sm',
+              gotRight  && 'text-brand font-medium',
+              missed    && 'text-amber-700 dark:text-amber-400 font-medium',
+              wrongPick && 'text-red-600 dark:text-red-400',
+              (irrelevant || (!submitted && !isSelected)) && 'text-foreground',
             )}>
               {opt}
             </span>
+            {missed && (
+              <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 shrink-0">missed</span>
+            )}
           </motion.button>
         )
       })}
@@ -628,8 +649,11 @@ interface QuizState {
     xpDeducted: number
   }[]
   feedbackCorrect: boolean
+  feedbackPartial: { got: number; total: number } | null
   totalXP: number
 }
+
+const MULTI_ANSWER_TYPES = ['multiple-select', 'email-inspection', 'drag-drop'] as const
 
 interface QuizEngineProps {
   quiz: Quiz
@@ -688,6 +712,7 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
     xpDeducted: {},
     resultItems: [],
     feedbackCorrect: false,
+    feedbackPartial: null,
     totalXP: 0,
   })
 
@@ -736,13 +761,23 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
   const handleSubmit = () => {
     if (!hasAnswer()) return
     const correct = checkAnswer(question, currentAnswer)
-    setState((s) => ({ ...s, phase: 'feedback', feedbackCorrect: correct }))
+    let feedbackPartial: QuizState['feedbackPartial'] = null
+    if (MULTI_ANSWER_TYPES.includes(question.type as typeof MULTI_ANSWER_TYPES[number])) {
+      const correctAnswers = Array.isArray(question.answer) ? question.answer : []
+      const ua = Array.isArray(currentAnswer) ? currentAnswer : []
+      feedbackPartial = { got: correctAnswers.filter(a => ua.includes(a)).length, total: correctAnswers.length }
+    }
+    setState((s) => ({ ...s, phase: 'feedback', feedbackCorrect: correct, feedbackPartial }))
   }
 
   const handleNext = () => {
     const correct = checkAnswer(question, currentAnswer)
     const deducted = state.xpDeducted[question.id] ?? 0
-    const xpForQuestion = correct ? 10 : 0
+    // Partial XP for multi-answer questions where the user got some (not all) correct
+    let xpForQuestion = correct ? 10 : 0
+    if (!correct && state.feedbackPartial && state.feedbackPartial.got > 0) {
+      xpForQuestion = Math.round((state.feedbackPartial.got / state.feedbackPartial.total) * 10)
+    }
 
     const resultItem = {
       question,
@@ -779,6 +814,7 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
         currentIndex: s.currentIndex + 1,
         resultItems: [...s.resultItems, resultItem],
         totalXP: s.totalXP + xpForQuestion,
+        feedbackPartial: null,
       }))
     }
   }
@@ -792,6 +828,7 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
       xpDeducted: {},
       resultItems: [],
       feedbackCorrect: false,
+      feedbackPartial: null,
       totalXP: 0,
     })
   }
@@ -841,10 +878,11 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
             <h3 className="text-base font-semibold text-foreground leading-snug">{question.prompt}</h3>
           </div>
 
-          {/* Question type renderer — shakes on wrong answer */}
+          {/* Question type renderer — shakes only on fully wrong (not partial) */}
           <motion.div
             animate={
-              state.phase === 'feedback' && !state.feedbackCorrect
+              state.phase === 'feedback' && !state.feedbackCorrect &&
+              (!state.feedbackPartial || state.feedbackPartial.got === 0)
                 ? { x: [-10, 10, -7, 7, -4, 4, 0] }
                 : { x: 0 }
             }
@@ -936,33 +974,44 @@ export function QuizEngine({ quiz, onComplete }: QuizEngineProps) {
                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 className="overflow-hidden"
               >
-                <div className={cn(
-                  'rounded-xl border p-4 space-y-2',
-                  state.feedbackCorrect
-                    ? 'border-brand/30 bg-brand/5'
-                    : 'border-red-200 dark:border-red-800/50 bg-red-50/60 dark:bg-red-950/20'
-                )}>
-                  <div className="flex items-center gap-2">
-                    <motion.div
-                      initial={{ scale: 0, rotate: -20 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.05 }}
-                    >
-                      {state.feedbackCorrect ? (
-                        <CheckCircle2 className="h-5 w-5 text-brand" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500" />
-                      )}
-                    </motion.div>
-                    <span className={cn(
-                      'text-sm font-bold',
-                      state.feedbackCorrect ? 'text-brand' : 'text-red-600 dark:text-red-400'
+                {(() => {
+                  const partial = state.feedbackPartial
+                  const isPartial = !state.feedbackCorrect && partial && partial.got > 0
+                  const isCorrect = state.feedbackCorrect
+                  return (
+                    <div className={cn(
+                      'rounded-xl border p-4 space-y-2',
+                      isCorrect && 'border-brand/30 bg-brand/5',
+                      isPartial && 'border-amber-400/50 bg-amber-50/60 dark:bg-amber-950/20',
+                      !isCorrect && !isPartial && 'border-red-200 dark:border-red-800/50 bg-red-50/60 dark:bg-red-950/20',
                     )}>
-                      {state.feedbackCorrect ? 'Correct!' : 'Not quite right'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-foreground/80 leading-relaxed">{question.explanation}</p>
-                </div>
+                      <div className="flex items-center gap-2">
+                        <motion.div
+                          initial={{ scale: 0, rotate: -20 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.05 }}
+                        >
+                          {isCorrect && <CheckCircle2 className="h-5 w-5 text-brand" />}
+                          {isPartial && <AlertCircle className="h-5 w-5 text-amber-500" />}
+                          {!isCorrect && !isPartial && <XCircle className="h-5 w-5 text-red-500" />}
+                        </motion.div>
+                        <div>
+                          <span className={cn(
+                            'text-sm font-bold',
+                            isCorrect && 'text-brand',
+                            isPartial && 'text-amber-600 dark:text-amber-400',
+                            !isCorrect && !isPartial && 'text-red-600 dark:text-red-400',
+                          )}>
+                            {isCorrect ? 'Correct!'
+                              : isPartial ? `Partially correct — ${partial!.got} of ${partial!.total} right`
+                              : 'Not quite right'}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-foreground/80 leading-relaxed">{question.explanation}</p>
+                    </div>
+                  )
+                })()}
               </motion.div>
             )}
           </AnimatePresence>

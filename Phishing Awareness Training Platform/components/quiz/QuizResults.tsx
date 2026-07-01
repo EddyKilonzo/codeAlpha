@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Trophy, XCircle, RotateCcw, ChevronRight, Star, Check, X } from 'lucide-react'
+import { Trophy, XCircle, RotateCcw, ChevronRight, Star, Check, X, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PASSING_SCORE } from '@/lib/constants'
@@ -124,56 +124,114 @@ export function QuizResults({ results, totalXP, moduleId, onRetry, onContinue }:
       {/* Per-question breakdown */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Question Breakdown</h3>
-        {results.map((result, i) => (
-          <motion.div
-            key={result.question.id}
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 + i * 0.05 }}
-            className={cn(
-              'rounded-xl border p-4 space-y-2',
-              result.correct
-                ? 'border-brand/20 bg-brand/5'
-                : 'border-red-200/60 dark:border-red-800/30 bg-red-50/40 dark:bg-red-950/10'
-            )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2">
-                <span className={cn(
-                  'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
-                  result.correct ? 'bg-brand text-white' : 'bg-red-500 text-white'
-                )}>
-                  {result.correct ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                </span>
-                <p className="text-xs font-medium text-foreground leading-snug">{result.question.prompt}</p>
-              </div>
-              {result.hintsUsed > 0 && (
-                <span className="shrink-0 text-[10px] text-muted-foreground">
-                  −{result.xpDeducted} XP (hints)
-                </span>
-              )}
-            </div>
+        {results.map((result, i) => {
+          const isMultiAnswer = ['multiple-select', 'email-inspection', 'drag-drop'].includes(result.question.type)
+          const correctAnswers = isMultiAnswer && Array.isArray(result.question.answer) ? result.question.answer : []
+          const ua = isMultiAnswer && Array.isArray(result.userAnswer) ? result.userAnswer : []
+          const gotRight  = correctAnswers.filter(a => ua.includes(a))
+          const wrongPick = ua.filter(a => !correctAnswers.includes(a))
+          const missed    = correctAnswers.filter(a => !ua.includes(a))
+          const isPartial = isMultiAnswer && !result.correct && gotRight.length > 0
 
-            {!result.correct && (
-              <div className="pl-7 space-y-1">
-                <p className="text-[11px] text-red-600 dark:text-red-400">
-                  Your answer: {Array.isArray(result.userAnswer) ? result.userAnswer.join(' · ') : result.userAnswer || 'No answer'}
-                </p>
-                <p className="text-[11px] text-brand">
-                  Correct:{' '}
-                  {result.question.type === 'match-pair' && result.question.matchPairs
-                    ? Object.entries(result.question.matchPairs).map(([k, v]) => `${k} → ${v}`).join(' · ')
-                    : Array.isArray(result.question.answer)
-                      ? result.question.answer.join(', ')
-                      : result.question.answer}
-                </p>
-                <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
-                  {result.question.explanation}
-                </p>
+          return (
+            <motion.div
+              key={result.question.id}
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 + i * 0.05 }}
+              className={cn(
+                'rounded-xl border p-4 space-y-2',
+                result.correct && 'border-brand/20 bg-brand/5',
+                isPartial     && 'border-amber-400/40 bg-amber-50/30 dark:bg-amber-950/10',
+                !result.correct && !isPartial && 'border-red-200/60 dark:border-red-800/30 bg-red-50/40 dark:bg-red-950/10',
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <span className={cn(
+                    'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
+                    result.correct && 'bg-brand text-white',
+                    isPartial     && 'bg-amber-500 text-white',
+                    !result.correct && !isPartial && 'bg-red-500 text-white',
+                  )}>
+                    {result.correct && <Check className="h-3 w-3" />}
+                    {isPartial     && <AlertCircle className="h-3 w-3" />}
+                    {!result.correct && !isPartial && <X className="h-3 w-3" />}
+                  </span>
+                  <div>
+                    <p className="text-xs font-medium text-foreground leading-snug">{result.question.prompt}</p>
+                    {isPartial && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">
+                        {gotRight.length} of {correctAnswers.length} correct
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {result.hintsUsed > 0 && (
+                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                    −{result.xpDeducted} XP (hints)
+                  </span>
+                )}
               </div>
-            )}
-          </motion.div>
-        ))}
+
+              {/* Partial: per-answer breakdown */}
+              {isPartial && (
+                <div className="pl-7 space-y-1.5">
+                  {gotRight.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {gotRight.map(a => (
+                        <span key={a} className="inline-flex items-center gap-1 text-[10px] bg-brand/10 text-brand border border-brand/25 rounded-md px-1.5 py-0.5 font-medium">
+                          <Check className="h-2.5 w-2.5" />{a}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {wrongPick.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {wrongPick.map(a => (
+                        <span key={a} className="inline-flex items-center gap-1 text-[10px] bg-red-50 text-red-600 border border-red-200/70 rounded-md px-1.5 py-0.5 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800/40 font-medium">
+                          <X className="h-2.5 w-2.5" />{a}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {missed.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {missed.map(a => (
+                        <span key={a} className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200/70 rounded-md px-1.5 py-0.5 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/40 font-medium">
+                          missed: {a}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-0.5">
+                    {result.question.explanation}
+                  </p>
+                </div>
+              )}
+
+              {/* Fully wrong: show correct answer */}
+              {!result.correct && !isPartial && (
+                <div className="pl-7 space-y-1">
+                  <p className="text-[11px] text-red-600 dark:text-red-400">
+                    Your answer: {Array.isArray(result.userAnswer) ? result.userAnswer.join(' · ') : result.userAnswer || 'No answer'}
+                  </p>
+                  <p className="text-[11px] text-brand">
+                    Correct:{' '}
+                    {result.question.type === 'match-pair' && result.question.matchPairs
+                      ? Object.entries(result.question.matchPairs).map(([k, v]) => `${k} → ${v}`).join(' · ')
+                      : Array.isArray(result.question.answer)
+                        ? result.question.answer.join(', ')
+                        : result.question.answer}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
+                    {result.question.explanation}
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          )
+        })}
       </div>
 
       {/* Actions */}

@@ -167,20 +167,6 @@ export function CertificateModal({ open, onClose }: Props) {
       certRef.current.querySelectorAll<HTMLCanvasElement>('[data-cert-pattern]')
     )
 
-    // globals.css sets `background-image: url("data:image/svg+xml,...")` on
-    // `body`, `#main-content`, and `.hex-bg`. html2canvas clones the whole
-    // document, then tries to render body's SVG background →
-    // createPattern(0×0 canvas) → throws.
-    //
-    // Fix: set an inline `!important` override on the LIVE elements before
-    // html2canvas runs (it clones from the live DOM, so the override travels
-    // into the clone). Restore everything in finally.
-    const svgBgTargets: HTMLElement[] = [document.body]
-    const mainEl = document.getElementById('main-content')
-    if (mainEl) svgBgTargets.push(mainEl)
-    document.querySelectorAll<HTMLElement>('.hex-bg').forEach(el => svgBgTargets.push(el))
-    svgBgTargets.forEach(el => el.style.setProperty('background-image', 'none', 'important'))
-
     document.body.appendChild(wrapper)
 
     try {
@@ -195,8 +181,32 @@ export function CertificateModal({ open, onClose }: Props) {
         logging: false,
         width: 900,
         height: 640,
-        onclone: (_clonedDoc, clonedEl) => {
-          // html2canvas reclones elements internally, so canvas pixels are lost.
+        onclone: (clonedDoc, clonedEl) => {
+          // Mark the certificate root so the style below can exclude it.
+          clonedEl.setAttribute('data-cert-root', 'true')
+
+          // html2canvas renders SVG data-URL backgrounds by loading the SVG into a
+          // canvas. If the SVG has no explicit width/height, that canvas is 0×0 and
+          // ctx.createPattern throws InvalidStateError.
+          //
+          // The pre-clone getComputedStyle approach is unreliable because html2canvas
+          // builds its own CSS cascade from the cloned document's stylesheets. The
+          // only safe place to fix this is inside onclone, where we work on the exact
+          // document html2canvas will render.
+          //
+          // Strategy: inject a high-specificity stylesheet rule that suppresses
+          // background-image on every element OUTSIDE the certificate. Elements
+          // inside the certificate use canvas elements and radial-gradient inline
+          // styles — neither triggers the SVG canvas-pattern error.
+          const fix = clonedDoc.createElement('style')
+          fix.textContent = `
+            *:not([data-cert-root]):not([data-cert-root] *) {
+              background-image: none !important;
+            }
+          `
+          clonedDoc.head.appendChild(fix)
+
+          // html2canvas reclones elements internally so canvas pixels are lost.
           // Redraw hex grid + wave borders from the live source canvases.
           clonedEl.querySelectorAll<HTMLCanvasElement>('[data-cert-pattern]').forEach((dst, i) => {
             const src = srcCanvases[i]
@@ -224,8 +234,6 @@ export function CertificateModal({ open, onClose }: Props) {
       console.error('Certificate download failed:', err)
       setDownloadError(`PDF failed: ${msg}`)
     } finally {
-      // Restore SVG backgrounds on live elements
-      svgBgTargets.forEach(el => el.style.removeProperty('background-image'))
       document.body.removeChild(wrapper)
       setIsDownloading(false)
     }
