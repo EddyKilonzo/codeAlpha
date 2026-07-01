@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   ShieldAlert, Fish, Crosshair, Zap, FileSearch, ShieldCheck,
-  Lock, LockOpen, CheckCircle2, ChevronRight, Clock, Star,
+  Lock, Check, CheckCircle2, ChevronRight, Clock, Star,
   Trophy, BookOpen, GraduationCap, Flame, PlayCircle,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -232,7 +232,7 @@ export function DashboardClient() {
 
             const card = (
               <div className={cn(
-                'group relative flex h-full flex-col rounded-2xl border overflow-hidden shadow-premium-sm transition-colors',
+                'group relative flex h-full flex-col rounded-2xl border overflow-hidden shadow-premium transition-colors',
                 isUnlocked && 'card-lift cursor-pointer',
                 isNext && 'border-brand/40',
                 isCompleted && 'border-brand/20',
@@ -261,14 +261,14 @@ export function DashboardClient() {
                   </span>
 
                   <div className="relative flex items-start justify-between">
-                    {/* Icon badge */}
+                    {/* Icon badge — always the module's own distinct icon */}
                     <div className={cn(
-                      'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border overflow-hidden',
+                      'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border',
                       isCompleted ? 'bg-brand/10 border-brand/20'
                         : isNext ? 'bg-brand/[0.08] border-brand/15'
-                          : isUnlocked ? 'bg-muted border-border'
-                            : 'bg-muted border-border',
+                          : 'bg-muted border-border',
                     )}>
+                      {/* Unlock flash */}
                       {justUnlockedId === mod.id && (
                         <motion.div
                           className="absolute inset-0 bg-brand/20 rounded-xl"
@@ -277,24 +277,24 @@ export function DashboardClient() {
                           transition={{ duration: 0.9, ease: 'easeOut' }}
                         />
                       )}
-                      {!isUnlocked ? (
-                        <Lock className="h-5 w-5 text-muted-foreground" />
-                      ) : isCompleted ? (
-                        <CheckCircle2 className="h-6 w-6 text-brand" />
-                      ) : justUnlockedId === mod.id ? (
-                        <AnimatePresence mode="wait">
-                          <motion.span
-                            key="lock-open"
-                            initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
-                            animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                            exit={{ scale: 1.2, opacity: 0 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                          >
-                            <LockOpen className="h-6 w-6 text-brand" />
-                          </motion.span>
-                        </AnimatePresence>
-                      ) : (
-                        <Icon className={cn('h-6 w-6', isNext ? 'text-brand' : 'text-muted-foreground')} />
+
+                      <Icon className={cn(
+                        'h-6 w-6',
+                        isCompleted || isNext ? 'text-brand'
+                          : isUnlocked ? 'text-foreground/70'
+                            : 'text-muted-foreground',
+                      )} />
+
+                      {/* Corner status indicator — keeps the module icon visible */}
+                      {isCompleted && (
+                        <span className="absolute -bottom-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white border-2 border-card">
+                          <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                        </span>
+                      )}
+                      {!isUnlocked && (
+                        <span className="absolute -bottom-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/90 text-background border-2 border-card">
+                          <Lock className="h-2.5 w-2.5" strokeWidth={2.5} />
+                        </span>
                       )}
                     </div>
 
